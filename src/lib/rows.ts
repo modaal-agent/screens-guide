@@ -1,7 +1,7 @@
 // The rows of a device's reading tables, shared by the HTML pages and their Markdown copies.
 
 import type { Device, Reading, Rect } from './dataset.ts'
-import { corners, insets, num, size } from './data.ts'
+import { corners, insets, num, size } from './format.ts'
 
 export interface Cell {
   text: string | null
