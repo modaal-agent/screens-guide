@@ -1,10 +1,16 @@
 // The pages about the data rather than the devices: for agents, the method, the changelog and
 // privacy.
 
+import { WORKER_EVENT_DOCS } from '../../../worker/analytics.ts'
+import { DAY_LIMIT, MINUTE_LIMIT } from '../../../worker/ratelimit.ts'
+import { TOOLS } from '../../../worker/tools.ts'
 import { EVENT_DOCS, POSTHOG_HOST } from '../analytics.ts'
 import type { Block, Doc } from '../doc.ts'
 import { DATA, DEVICES, readingCount } from '../data.ts'
 import { DATA_LICENSE, SITE } from '../site.ts'
+
+/** The MCP server's address. */
+export const MCP_URL = `${SITE}/mcp`
 
 /** The data files and text files the site serves, in the order /agents and llms.txt list them. */
 export const FILES: { path: string; name: string; what: string }[] = [
@@ -27,7 +33,25 @@ export function agentsDoc(): Doc {
       {
         type: 'p',
         lede: true,
-        text: `The site's numbers are a dataset first: ${DEVICES.length} devices and ${readingCount()} readings, version ${DATA.version} of ${DATA.updated}. Fetch the files below, or a Markdown copy of any page.`,
+        text: `The site's numbers are a dataset first: ${DEVICES.length} devices and ${readingCount()} readings, version ${DATA.version} of ${DATA.updated}. Connect an agent to the MCP server, fetch the files below, or fetch a Markdown copy of any page.`,
+      },
+      { type: 'h2', text: 'MCP server' },
+      {
+        type: 'p',
+        text: `\`${MCP_URL}\` is a remote MCP server over Streamable HTTP, with no sign-in. Add it to Claude Code with \`claude mcp add --transport http screens-guide ${MCP_URL}\`, or give the URL to any MCP client. Its tools read the dataset and change nothing:`,
+      },
+      {
+        type: 'table',
+        head: ['Tool', 'What it does'],
+        rows: TOOLS.map((t) => ({ cells: [`\`${t.name}\``, t.title] })),
+      },
+      {
+        type: 'list',
+        items: [
+          "Lengths are in the device's unit and positions in window coordinates, as in the files. `check_layout` takes frames in the same coordinates and reports each one that reaches outside the window, into an inset, past a rounded corner, under a system bar, across a fold or into a reserved region, with the numbers.",
+          `Each client address may send ${MINUTE_LIMIT} requests a minute and ${DAY_LIMIT.toLocaleString('en-US')} a UTC day. A request over either limit gets HTTP 429 with \`Retry-After\`, the seconds until the limit resets.`,
+          'The server keeps no session and answers each request with one JSON response; it opens no event stream.',
+        ],
       },
       { type: 'h2', text: 'Files' },
       {
@@ -119,7 +143,7 @@ export function privacyDoc(): Doc {
   return {
     path: '/privacy',
     title: 'Privacy',
-    description: 'What screens.guide collects: usage events in PostHog\'s EU region without cookies, and the requests Cloudflare logs.',
+    description: "What screens.guide collects: usage events in PostHog's EU region without cookies, the MCP server's daily request count, and the requests Cloudflare logs.",
     h1: 'Privacy',
     blocks: [
       {
@@ -139,6 +163,20 @@ export function privacyDoc(): Doc {
       {
         type: 'p',
         text: "With each event, PostHog's library adds the page's address and the referring page, the browser's user agent, name and version, the operating system, the device type, the screen and window sizes, the language and the time zone. PostHog's servers receive each request's IP address; [PostHog's privacy policy](https://posthog.com/privacy) covers what they keep. The site's code that sends the events is `src/lib/analytics.ts` in the [source](https://github.com/modaal-agent/screens-guide).",
+      },
+      { type: 'h2', text: 'The MCP server' },
+      {
+        type: 'p',
+        text: "The MCP server at `/mcp` sends the event below to the same PostHog project, only for requests to screens.guide itself. The server sends it from Cloudflare, so PostHog receives Cloudflare's address and not yours, and the event asks PostHog to skip its location lookup. Each event has a new random id, so PostHog cannot link two requests, and stores no person profile. No event carries your IP address, the frames you send to `check_layout` or other text you send. The code is `worker/analytics.ts`.",
+      },
+      {
+        type: 'table',
+        head: ['Event', 'Sent when', 'Carries'],
+        rows: Object.entries(WORKER_EVENT_DOCS).map(([name, e]) => ({ cells: [`\`${name}\``, e.when, e.properties] })),
+      },
+      {
+        type: 'p',
+        text: `To keep the server's limit of ${DAY_LIMIT.toLocaleString('en-US')} requests a UTC day per address, a Cloudflare Durable Object named by the SHA-256 hash of your IP address stores the current UTC date and the number of requests from that address on it. The first request on a new date replaces both. The address itself is not stored. Cloudflare's rate limiting counts the limit of ${MINUTE_LIMIT} a minute, keyed by the address. The code is \`worker/ratelimit.ts\`.`,
       },
       { type: 'h2', text: 'Hosting' },
       {

@@ -214,3 +214,21 @@ describe('the files for agents', () => {
     }
   })
 })
+
+describe('the MCP server on the pages', () => {
+  it('gives the endpoint, the Claude Code command, each tool and the limits on /agents and its copy', () => {
+    for (const page of [text(file('agents.html')), file('agents.md')]) {
+      expect(page).toContain(`${SITE}/mcp`)
+      expect(page).toContain(`claude mcp add --transport http screens-guide ${SITE}/mcp`)
+      for (const tool of ['list_devices', 'get_device', 'compare_devices', 'check_layout', 'convert_units']) expect(page).toContain(tool)
+      expect(page).toContain('100 requests a minute and 1,000 a UTC day')
+    }
+  })
+
+  it("lists the server's event and the day count it keeps on /privacy", () => {
+    const page = text(file('privacy.html'))
+    expect(page).toContain('mcp_request')
+    expect(page).toContain('SHA-256 hash of your IP address')
+    expect(page).toContain('worker/ratelimit.ts')
+  })
+})

@@ -29,7 +29,7 @@ scripts/check-skills.sh --self-test   # each check red against a seeded violatio
 npm ci && npm run check:data          # data/devices.json against data/schema.json and its rules (ci.yml, `site`)
 npm run check && npm run build        # astro check, then the site into dist/ (ci.yml, `site`)
 npm test                              # vitest; the site tests read dist/ (ci.yml, `site`)
-npx wrangler dev                      # dist/ as the Worker serves it, with public/_headers (no CI job)
+npx wrangler dev                      # dist/ and /mcp as the Worker serves them (no CI job)
 ```
 
 ## State a rule once
@@ -40,8 +40,11 @@ npx wrangler dev                      # dist/ as the Worker serves it, with publ
 - The plugin's name is `name` in `skills/.claude-plugin/plugin.json`, and
   `.claude-plugin/marketplace.json` has one entry with that name. S8 compares the two.
 - README.md's skill table is the index of `skills/`. S9 fails a skill directory it does not mention.
-- The PostHog project token and host are written once, as constants in `src/lib/analytics.ts`; the
+- The PostHog project token and host are written once, as constants in `src/lib/posthog.ts`; the
   pages and the Worker import them (spec 001 §5.5).
+- The MCP server's limits are `MINUTE_LIMIT` and `DAY_LIMIT` in `worker/ratelimit.ts`, and the
+  minute limit again in `wrangler.jsonc`'s `ratelimits`, which `tests/hosting.test.ts` compares.
+  `/agents` and `/privacy` print the constants.
 
 ## What goes in which document
 

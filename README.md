@@ -32,15 +32,15 @@ npm run check                         # astro check: the pages' and the code's t
 npm run build                         # the static site, into dist/
 npm test                              # vitest; its site tests read dist/, so build first
 npm run dev                           # the site at http://localhost:4321, rebuilt on each save
-npx wrangler dev                      # dist/ as the Worker serves it, with public/_headers, at http://localhost:8787
+npx wrangler dev                      # dist/ and the MCP server as the Worker serves them, at http://localhost:8787
 ```
 
 ## Deploy
 
 `.github/workflows/deploy.yml` runs the checks, builds the site and runs `npx wrangler deploy` on
 every push to `main`. The Worker `screens-guide` (`wrangler.jsonc`) serves `dist/` as static assets
-at https://screens.guide and runs no script. The workflow needs the repository secret
-`CLOUDFLARE_API_TOKEN` and the repository variable `CLOUDFLARE_ACCOUNT_ID`.
+at https://screens.guide, and runs `worker/index.ts` for `/mcp`, the MCP server. The workflow needs
+the repository secret `CLOUDFLARE_API_TOKEN` and the repository variable `CLOUDFLARE_ACCOUNT_ID`.
 
 ## Layout
 
@@ -53,10 +53,12 @@ at https://screens.guide and runs no script. The workflow needs the repository s
 | `data/schema.json`, `data/CHANGELOG.md` | its JSON Schema, and one entry per dataset version |
 | `src/lib/` | the code the checks and the site share: the dataset's types, the data checks, the geometry, the table rows, the CSV and the files for agents |
 | `src/islands/` | the Preact islands: the explorer, the comparison and the playgrounds |
-| `src/lib/analytics.ts` | PostHog's token, host and options, the events and their `/privacy` rows |
+| `src/lib/posthog.ts` | PostHog's project token and host, which the pages and the Worker import |
+| `src/lib/analytics.ts` | the pages' PostHog options, their events and the events' `/privacy` rows |
 | `src/lib/pages/` | each page's content as blocks (`src/lib/doc.ts`), rendered as HTML by `DocBlocks.astro` and as the page's `.md` copy |
 | `src/pages/`, `src/components/`, `src/layouts/`, `src/styles/` | the pages and the data and text files, built by Astro into `dist/`; every number on them comes from `data/devices.json` |
 | `astro.config.mjs`, `tsconfig.json` | the build: one `.html` file per page, no trailing slashes |
+| `worker/` | the Worker script: the MCP server at `/mcp`, its tools, its rate limit and its usage events |
 | `scripts/check-data.ts`, `tests/` | `npm run check:data`, and the vitest files |
 | `scripts/check-agent-rules.sh` | the comparison of `AGENTS.md` with `CLAUDE.md` |
 | `scripts/check-skills.sh` | the checks on skills, plugin manifests and specs, with `--self-test` |

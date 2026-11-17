@@ -1,10 +1,10 @@
 // PostHog, in its EU region, cookieless: the page view and the four events of spec 001 §5.5, with
 // no free text in any property. It starts only on screens.guide, so a local server, CI and
-// previews send nothing. Spec 002's Worker imports the token and host from here.
+// previews send nothing. The token and host are in src/lib/posthog.ts, which the Worker imports too.
 
-export const POSTHOG_TOKEN = 'phc_uUCsuu3u789nj9y6wBqTqDhffPrnbJwn9P75ezSyK4pf'
-export const POSTHOG_HOST = 'https://eu.i.posthog.com'
-export const ANALYTICS_HOSTNAME = 'screens.guide'
+import { ANALYTICS_HOSTNAME, POSTHOG_HOST, POSTHOG_TOKEN } from './posthog.ts'
+
+export { ANALYTICS_HOSTNAME, POSTHOG_HOST, POSTHOG_TOKEN }
 
 /**
  * posthog-js's options: no cookie and no browser storage, the page view and the named events only,

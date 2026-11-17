@@ -33,8 +33,8 @@ a private one is redacted there before the commit carrying it is pushed.
 | `npm run check:data` | `site` | `data/devices.json` against `data/schema.json`, and the rules of spec 001 §6: insets leave a safe area, corner radii at most half the shorter side, pixels equal to the window times the scale or density, unique ids and readings, a `current` build that has readings and is not a pre-release, a reason for every null field, a `data/CHANGELOG.md` entry for `version` |
 | `npm run check` | `site` | astro check: a type error in a page, a component or `src/lib/` |
 | `npm run build` | `site` | a page that fails to render |
-| `npx wrangler dev` | none; run it after changing `wrangler.jsonc`, `public/_headers` or the build | `dist/` as the Worker serves it: check that each URL answers with its `Content-Type`, an unknown path answers 404, and the headers of `public/_headers` arrive; `tests/hosting.test.ts` reads both files |
-| `npm test` | `site` | vitest: `tests/*.test.ts`, among them one seeded violation per data rule; `tests/site.test.ts` reads `dist/` and fails on a device missing from the home page table or without a page or JSON file, a page without its `.md` copy, a page missing from `llms.txt` or the sitemap, a link to a file the build did not write, and a word joined to the value after it (Astro drops the line break before a line that starts with `{` or an inline element; keep the word and the value on one line) |
+| `npx wrangler dev` | none; run it after changing `wrangler.jsonc`, `public/_headers` or the build | `dist/` and `/mcp` as the Worker serves them: check that each URL answers with its `Content-Type`, an unknown path answers 404, and the headers of `public/_headers` arrive; `tests/hosting.test.ts` reads both files |
+| `npm test` | `site` | vitest: `tests/*.test.ts`, among them one seeded violation per data rule; `tests/site.test.ts` reads `dist/` and fails on a device missing from the home page table or without a page or JSON file, a page without its `.md` copy, a page missing from `llms.txt` or the sitemap, a link to a file the build did not write, and a word joined to the value after it (Astro drops the line break before a line that starts with `{` or an inline element; keep the word and the value on one line); `tests/mcp.test.ts` drives `/mcp` through the Worker's `fetch` with its bindings stubbed; `tests/conformance.test.ts` starts `wrangler dev` on a free port and calls every tool through the MCP TypeScript SDK's client |
 
 No network and no build: bash, find, grep, awk, perl and python3. `--self-test` builds a valid
 fixture tree in a temporary directory once per seeded violation, and fails if the check it targets
@@ -91,6 +91,34 @@ Each page's content is a `Doc` in `src/lib/pages/`: its title, description, head
 - An event is a key of `Events` in `src/lib/analytics.ts` and a row of `EVENT_DOCS`, which
   `/privacy` lists; spec 001 §5.5 lists it first. `startAnalytics` starts PostHog on
   `screens.guide` only; `tests/analytics.test.ts` checks the host and the options.
+
+## The MCP server
+
+`worker/index.ts` is the Worker script. `run_worker_first` in `wrangler.jsonc` sends `/mcp` to it;
+Cloudflare serves every other path from `dist/` without running it.
+
+- `worker/mcp.ts` answers the JSON-RPC methods `initialize`, `ping`, `tools/list` and
+  `tools/call`, one JSON response per POST, with no session and no event stream.
+- To add a tool, write a `Tool` in `worker/tools.ts` with its `inputSchema`, its `outputSchema` and
+  `run`, and add it to `TOOLS`. `withDefs` copies the dataset schema's `$defs` an output schema
+  names. `/agents` lists `TOOLS`. Add the tool's calls to `tests/mcp.test.ts`, which validates each
+  result against its `outputSchema` with Ajv, and to the list in `tests/conformance.test.ts`.
+- `worker/arguments.ts` checks a tool's arguments, because the Workers runtime refuses the code
+  generation Ajv uses. It reads the keywords `type`, `properties`, `required`,
+  `additionalProperties`, `items`, `enum`, `minimum`, `minLength`, `maxLength`, `minItems` and
+  `maxItems`; `tests/mcp.test.ts` fails on an input schema with any other keyword. Add a keyword to
+  both before using it.
+- An argument the tool cannot serve, such as an unknown device id, returns a result with `isError`
+  and text naming the valid values, so the agent can correct the call; a JSON-RPC error is for a
+  malformed request.
+- The Worker's events are rows of `WORKER_EVENT_DOCS` in `worker/analytics.ts`, which `/privacy`
+  lists beside the pages' events. They are sent only for requests to `screens.guide`.
+- `toolEventProperties` in `worker/tools.ts` writes a tool call's event: only enum values, device
+  ids and runtimes the dataset knows, and counts. A string the client sent never reaches an event.
+- `public/_headers` does not apply to a response the script builds. `SECURITY_HEADERS` in
+  `worker/mcp.ts` carries the same headers for `/mcp`.
+- The day limit reads `MCP_DAY_LIMIT` from the environment when it is set, so
+  `npx wrangler dev --var MCP_DAY_LIMIT:12` reaches the limit in a few requests. Deploy without it.
 
 ## Skills, the plugin and the eval cases
 

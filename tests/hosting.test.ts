@@ -3,6 +3,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { MINUTE_LIMIT } from '../worker/ratelimit.ts'
 
 const ROOT = join(import.meta.dirname, '..')
 
@@ -30,13 +31,21 @@ function headers(): Map<string, Map<string, string>> {
 }
 
 describe('the Worker', () => {
-  it('serves dist/ as static assets at screens.guide, with no script', () => {
+  it('serves dist/ as static assets at screens.guide, and runs the script for /mcp only', () => {
     const w = wrangler()
     expect(w.name).toBe('screens-guide')
-    expect(w.main).toBeUndefined()
-    expect(w.assets).toEqual({ directory: './dist', not_found_handling: '404-page', html_handling: 'auto-trailing-slash' })
+    expect(w.main).toBe('./worker/index.ts')
+    expect(w.assets).toMatchObject({ directory: './dist', binding: 'ASSETS', not_found_handling: '404-page', html_handling: 'auto-trailing-slash' })
+    expect(w.assets.run_worker_first).toContain('/mcp')
     expect(w.routes).toEqual([{ pattern: 'screens.guide', custom_domain: true }])
     expect(w.send_metrics).toBe(false)
+  })
+
+  it("binds /mcp's rate limit: MINUTE_LIMIT a minute, and the DailyCount Durable Object", () => {
+    const w = wrangler()
+    expect(w.ratelimits).toEqual([{ name: 'MCP_MINUTE', namespace_id: '1001', simple: { limit: MINUTE_LIMIT, period: 60 } }])
+    expect(w.durable_objects.bindings).toEqual([{ name: 'DAILY_COUNT', class_name: 'DailyCount' }])
+    expect(w.migrations).toEqual([{ tag: 'v1', new_sqlite_classes: ['DailyCount'] }])
   })
 })
 
