@@ -21,18 +21,24 @@ jobs:
         run: bash scripts/check-agent-rules.sh
 
   # ── Skills and specs lane ────────────────────────────────────────
-  # Every skill under skills/, the two plugin manifests, and every spec's
-  # references. bash, find, grep, awk, perl and python3, all on ubuntu-latest,
-  # so it needs no toolchain and reports in seconds.
+  # Every skill under skills/, the two plugin manifests, the eval cases, and
+  # every spec's references. bash, find, grep, awk, perl, python3 and git, all on
+  # ubuntu-latest, so it needs no toolchain and reports in seconds. S19 compares
+  # skills/ with the pull request's base or the push's previous commit, so the
+  # checkout carries the whole history.
   skills:
-    name: Skills, plugin manifests and spec references
+    name: Skills, plugin manifests, eval cases and spec references
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
-      - name: Skills, manifests and specs
+      - name: Skills, manifests, eval cases and specs
         run: scripts/check-skills.sh
+        env:
+          SKILLS_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
 
       - name: Each check red against a seeded violation
         run: scripts/check-skills.sh --self-test

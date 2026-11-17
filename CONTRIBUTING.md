@@ -55,6 +55,9 @@ stays green. Run it after editing a check.
 | S11 | a file under `skills/` that names `AGENTS.md` without `CLAUDE.md`, or `CLAUDE.md` without `AGENTS.md` |
 | S15 | in a spec, a `§N` or `§N.M` with no matching heading or numbered definition; a `§"Title"` after a file name with no heading in that file beginning with the title; a "spec NNN §N" that does not resolve |
 | S16 | a spec with no `External references` section, an `E` id it cites with no row there, a public cell other than `yes` or `no`, or a `no` row that does not start `*Redacted:*` |
+| S17 | an eval case under `evals/` with no `prompt.md` body, a frontmatter key the runner does not read, no grader, a grader type the runner does not know or a key that type does not take; an `evals/` under `skills/` |
+| S18 | a file under `skills/` that is not Markdown, JSON or PNG, starts with `#!`, or is a symbolic link |
+| S19 | a change under `skills/` since the base commit with `plugin.json`'s `version` not raised. The base is `$SKILLS_BASE_REF`, which `ci.yml` sets to the pull request's base or the push's previous commit, else `HEAD` |
 
 The check ids follow `scripts/check-skills.sh` in
 [modaal-agent/skills](https://github.com/modaal-agent/skills), which this script is adapted from.
@@ -156,6 +159,7 @@ Adding to a skill:
 2. Raise `version` in `skills/.claude-plugin/plugin.json` in the same pull request.
 3. Run `claude plugin validate --strict .` and `claude plugin validate --strict ./skills`.
 4. Run the eval cases, and quote the scores and the cost in the commit message.
+   [evals/README.md](evals/README.md) lists the cases and how to write one.
 
 The eval runner reads cases only from inside a plugin's root, and refuses a case directory inside
 `skills/`. A round copies the plugin and `evals/` into one scratch directory first:

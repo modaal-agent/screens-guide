@@ -7,7 +7,9 @@
 # check the scripts a skill ships, and a skill here ships none
 # (specs/002-agent-interfaces/spec.md, D5). S8 reads this repository's layout:
 # the marketplace at .claude-plugin/marketplace.json, and the plugin rooted at
-# skills/, with its manifest at skills/.claude-plugin/plugin.json.
+# skills/, with its manifest at skills/.claude-plugin/plugin.json. S17 to S19
+# are this repository's (spec 002 §5): the eval cases, the plugin root's file
+# types, and the plugin's version.
 #
 # What they hold a skill to: frontmatter every install channel can parse, a body
 # inside the documented budgets, links that resolve, a README index that lists
@@ -23,6 +25,10 @@
 #   scripts/check-skills.sh               # check this checkout
 #   scripts/check-skills.sh <root>        # check a tree elsewhere
 #   scripts/check-skills.sh --self-test   # each check red against a seeded violation
+#
+# S19 compares the tree with a base commit: $SKILLS_BASE_REF when it is set (ci.yml
+# sets the pull request's base or the push's previous commit), else HEAD, so a
+# local run checks the uncommitted changes.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -260,6 +266,113 @@ for spec in specs:
 PY
 }
 
+# py_s17 <root>: one line per eval case the runner would refuse. The keys are the
+# ones `claude plugin eval` reads from prompt.md and from each grader's
+# frontmatter, as Claude Code 2.1.322 defines them; the runner fails a case on
+# any other key.
+py_s17() {
+  python3 - "$1" <<'PY'
+import pathlib, re, sys
+root = pathlib.Path(sys.argv[1])
+evals = root / 'evals'
+PROMPT_KEYS = {'schema_version', 'name', 'description', 'tags', 'plugins', 'runs', 'expected_outcome',
+               'model', 'max_turns', 'timeout_seconds', 'allowed_tools', 'disallowed_tools', 'artifact_publish',
+               'growthbook_overrides', 'append_system_prompt', 'env'}
+GRADER_KEYS = {
+    'regex': {'target', 'pattern', 'flags', 'match', 'weight', 'arm'},
+    'tool_order': {'before', 'after', 'weight', 'arm'},
+    'tool_used': {'tool', 'input_match', 'min', 'max', 'weight', 'arm'},
+    'file_exists': {'path', 'exists', 'weight', 'arm'},
+    'llm': {'criteria', 'focus', 'weight', 'arm'},
+    'baseline': {'baseline_file', 'criteria', 'weight', 'arm'},
+}
+BODY_KEY = {'regex': 'pattern', 'llm': 'criteria', 'baseline': 'criteria'}
+
+def split(path):
+    """The frontmatter's top-level keys and values, and the body; None when it does not close."""
+    text = path.read_text()
+    if not text.startswith('---\n'):
+        return {}, text
+    m = re.match(r'^---\n(.*?)^---[ \t]*(?:\n|\Z)', text, re.S | re.M)
+    if not m:
+        return None, ''
+    keys = {k: v.strip() for k, v in re.findall(r'^([A-Za-z_][A-Za-z0-9_-]*):(.*)$', m.group(1), re.M)}
+    return keys, text[m.end():]
+
+if (root / 'skills' / 'evals').exists():
+    print("skills/evals/ is inside the plugin root, where the runner refuses a case directory")
+cases = sorted(p for p in evals.iterdir() if p.is_dir() and p.name not in ('results', 'mocks'))
+if not cases:
+    print("evals/ holds no case directory")
+for case in cases:
+    prompt = case / 'prompt.md'
+    if not prompt.is_file():
+        print(f"{case.name}: no prompt.md"); continue
+    fm, body = split(prompt)
+    if fm is None:
+        print(f"{case.name}/prompt.md: the frontmatter does not close"); continue
+    for key in sorted(set(fm) - PROMPT_KEYS):
+        print(f"{case.name}/prompt.md: {key!r} is not a key the runner reads")
+    if not body.strip():
+        print(f"{case.name}/prompt.md: no body, so no prompt")
+    graders = sorted((case / 'graders').glob('*.md')) if (case / 'graders').is_dir() else []
+    if not graders:
+        print(f"{case.name}: no graders/*.md")
+    for grader in graders:
+        where = f"{case.name}/graders/{grader.name}"
+        fm, body = split(grader)
+        if not fm:
+            print(f"{where}: no frontmatter with type:"); continue
+        kind = fm.get('type')
+        if kind not in GRADER_KEYS:
+            print(f"{where}: type {kind!r} is not one of {', '.join(sorted(GRADER_KEYS))}"); continue
+        for key in sorted(set(fm) - GRADER_KEYS[kind] - {'type', 'name'}):
+            print(f"{where}: {key!r} is not a key of a {kind} grader")
+        if kind in BODY_KEY and BODY_KEY[kind] not in fm and not body.strip():
+            print(f"{where}: a {kind} grader needs its {BODY_KEY[kind]} as the body")
+        if kind == 'tool_used' and not fm.get('tool'):
+            print(f"{where}: a tool_used grader needs tool:")
+        if 'arm' in fm and fm['arm'] not in ('with-only', 'both'):
+            print(f"{where}: arm {fm['arm']!r} is not with-only or both")
+        if 'match' in fm and not re.fullmatch(r'contains|not_contains|count:\d+', fm['match']):
+            print(f"{where}: match {fm['match']!r} is not contains, not_contains or count:N")
+PY
+}
+
+# py_s18 <plugin root>: each file that is not Markdown, JSON or PNG, or that
+# starts with #!.
+py_s18() {
+  python3 - "$1" <<'PY'
+import pathlib, sys
+root = pathlib.Path(sys.argv[1])
+for f in sorted(p for p in root.rglob('*') if p.is_file() or p.is_symlink()):
+    rel = f.relative_to(root.parent)
+    if f.is_symlink():
+        print(f"{rel}: a symbolic link"); continue
+    if f.suffix.lower() not in ('.md', '.json', '.png'):
+        print(f"{rel}: not Markdown, JSON or PNG")
+    elif f.read_bytes()[:2] == b'#!':
+        print(f"{rel}: starts with #!")
+PY
+}
+
+# py_s19 <base version> <version>: prints a line when the version is not above the base's.
+py_s19() {
+  python3 - "$1" "$2" <<'PY'
+import re, sys
+base, new = sys.argv[1], sys.argv[2]
+parse = lambda v: tuple(int(x) for x in re.fullmatch(r'(\d+)\.(\d+)\.(\d+)', v).groups()) if re.fullmatch(r'\d+\.\d+\.\d+', v) else None
+if parse(new) is None or parse(base) is None:
+    print(f"a version is not MAJOR.MINOR.PATCH: {base!r} → {new!r}")
+elif parse(new) <= parse(base):
+    print(f"skills/ changed and plugin.json's version stayed at {new} (base {base})")
+PY
+}
+
+plugin_version() {
+  python3 -c 'import json, sys; print(json.load(sys.stdin).get("version", ""))'
+}
+
 FAILED=0
 fail() {
   printf '✘ %s — %s\n' "$1" "$2" >&2
@@ -297,6 +410,62 @@ run_checks() {
 $s8"
   else
     ok S8 "both manifests parse, name the same plugin, carry a version and load every skill"
+  fi
+
+  # ── S17: every eval case is one the runner reads ───────────────
+  # The runner refuses a case with an unknown frontmatter key, a grader of an
+  # unknown type or a key that type does not take. It costs model calls, so no
+  # CI job runs it, and a case it would refuse is caught here instead.
+  local s17
+  if [ ! -d "$ROOT/evals" ]; then
+    ok S17 "no evals/ yet — nothing to check"
+  else
+    s17="$(py_s17 "$ROOT")"
+    if [ -n "$s17" ]; then
+      fail S17 "an eval case the runner would refuse:
+$s17"
+    else
+      ok S17 "every eval case has a prompt, known keys and graders of known types"
+    fi
+  fi
+
+  # ── S18: the plugin root holds Markdown, JSON and PNG only ─────
+  # Anthropic's plugin directory refuses scripts and other file types from an
+  # unverified organization (spec 002 §1.8).
+  local s18
+  if [ ! -d "$SKILLS_DIR" ]; then
+    ok S18 "no skills/ yet — nothing to check"
+  else
+    s18="$(py_s18 "$SKILLS_DIR")"
+    if [ -n "$s18" ]; then
+      fail S18 "a file the plugin directory refuses:
+$s18"
+    else
+      ok S18 "skills/ holds Markdown, JSON and PNG files only, none starting with #!"
+    fi
+  fi
+
+  # ── S19: a change under skills/ raises the plugin's version ────
+  # Claude Code installs an update only when the version changes.
+  local base manifest="skills/.claude-plugin/plugin.json" base_version new_version s19
+  base="${SKILLS_BASE_REF:-HEAD}"
+  if ! git -C "$ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1 || [ "$(git -C "$ROOT" rev-parse --show-toplevel)" != "$(cd "$ROOT" && pwd -P)" ]; then
+    ok S19 "not the top of a git checkout — nothing to compare"
+  elif [ -z "${base//0/}" ] || ! git -C "$ROOT" rev-parse --verify -q "$base^{commit}" >/dev/null; then
+    ok S19 "no base commit to compare with ($base)"
+  elif ! git -C "$ROOT" cat-file -e "$base:$manifest" 2>/dev/null; then
+    ok S19 "the base $base has no plugin manifest — the first version"
+  elif [ -z "$(git -C "$ROOT" diff --name-only "$base" -- skills/; git -C "$ROOT" ls-files --others --exclude-standard -- skills/)" ]; then
+    ok S19 "nothing under skills/ changed since $base"
+  else
+    base_version="$(git -C "$ROOT" show "$base:$manifest" | plugin_version)"
+    new_version="$(plugin_version < "$ROOT/$manifest")"
+    s19="$(py_s19 "$base_version" "$new_version")"
+    if [ -n "$s19" ]; then
+      fail S19 "$s19"
+    else
+      ok S19 "skills/ changed since $base, and the version rose from $base_version to $new_version"
+    fi
   fi
 
   # ── S15, S16: every reference in a spec resolves for a public reader ──
@@ -522,6 +691,34 @@ FIXTURE
 FIXTURE
 }
 
+seed_eval() {
+  mkdir -p "$1/evals/fixture-case/graders"
+  cat > "$1/evals/fixture-case/prompt.md" <<'FIXTURE'
+---
+description: A valid case the self-test seeds one violation into.
+allowed_tools: [Read, Skill]
+max_turns: 4
+---
+
+A prompt.
+FIXTURE
+  cat > "$1/evals/fixture-case/graders/skill-fired.md" <<'FIXTURE'
+---
+type: tool_used
+tool: Skill
+min: 1
+arm: with-only
+---
+FIXTURE
+}
+
+# A git checkout of the fixture with one commit, for S19.
+seed_git() {
+  git -C "$1" init -q
+  git -C "$1" add -A
+  git -C "$1" -c user.name=fixture -c user.email=fixture@example.com -c commit.gpgsign=false commit -q -m fixture
+}
+
 seed_spec() {
   mkdir -p "$1/specs/001-fixture"
   cat > "$1/specs/001-fixture/spec.md" <<'FIXTURE'
@@ -565,7 +762,7 @@ self_test() {
   trap 'rm -rf "$WORK"' EXIT
 
   # A seed is a check name, with a suffix after "-" when one check has two.
-  for seed in S1 S2 S3 S4 S5 S6 S7 S8 S8-version S9 S10 S11 S15 S16 S16-redaction; do
+  for seed in S1 S2 S3 S4 S5 S6 S7 S8 S8-version S9 S10 S11 S15 S16 S16-redaction S17 S17-type S17-key S18 S18-shebang S19; do
     check="${seed%%-*}"
     root="$WORK/$seed"
     mkdir -p "$root"
@@ -597,6 +794,24 @@ self_test() {
         seed_spec "$root"
         perl -0pi -e 's/comes from E1\./comes from E1 and E2./' "$spec"
         echo '| E2 | notes from a private repository | no | — | §1 |' >> "$spec"
+        ;;
+      S17)
+        seed_eval "$root"
+        perl -0pi -e 's/^max_turns: 4$/max_turns: 4\nretries: 2/m' "$root/evals/fixture-case/prompt.md"
+        ;;
+      S17-type)
+        seed_eval "$root"
+        perl -0pi -e 's/^type: tool_used$/type: judge/m' "$root/evals/fixture-case/graders/skill-fired.md"
+        ;;
+      S17-key)
+        seed_eval "$root"
+        perl -0pi -e 's/^min: 1$/min: 1\nnot: true/m' "$root/evals/fixture-case/graders/skill-fired.md"
+        ;;
+      S18) mkdir -p "$root/skills/fixture-skill/scripts" && echo 'echo hi' > "$root/skills/fixture-skill/scripts/run.sh" ;;
+      S18-shebang) printf '#!/bin/sh\necho hi\n' > "$root/skills/fixture-skill/references/run.md" ;;
+      S19)
+        seed_git "$root"
+        echo 'A change with no version raise.' >> "$skill"
         ;;
     esac
     expect_red "$check" "$root" || red=1
