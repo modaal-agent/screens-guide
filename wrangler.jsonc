@@ -12,8 +12,13 @@
     "not_found_handling": "404-page",
     // /devices/iphone-17 serves devices/iphone-17.html; /guide/ redirects to /guide.
     "html_handling": "auto-trailing-slash",
-    // The MCP server (spec 002 §2).
-    "run_worker_first": ["/mcp"]
+    // The MCP server, the page routes and the counted files of spec 002 §3: RUN_WORKER_FIRST in
+    // worker/routes.ts, which tests/hosting.test.ts compares with this list.
+    "run_worker_first": [
+      "/mcp",
+      "/", "/guide", "/compare", "/runtimes", "/playground", "/agents", "/method", "/privacy", "/changelog", "/devices/*",
+      "/data/*", "/llms.txt", "/llms-full.txt", "/*.md", "/skills/*"
+    ]
   },
   "routes": [{ "pattern": "screens.guide", "custom_domain": true }],
   // /mcp's minute window: 100 requests per client address (spec 002 §2.6).

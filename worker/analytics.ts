@@ -1,5 +1,5 @@
-// The Worker's usage events (spec 002 §2.5): one PostHog event per message to /mcp and per request
-// the rate limit refuses. Each is anonymous, with a new random distinct_id, and carries the request's
+// The Worker's usage events (spec 002 §2.5): one PostHog event per message to /mcp, per request
+// the rate limit refuses, and per page and counted file the Worker serves. Each is anonymous, with a new random distinct_id, and carries the request's
 // User-Agent and Accept headers; none carries the client's address, a frame or text it sent.
 
 import { ANALYTICS_HOSTNAME, POSTHOG_HOST, POSTHOG_TOKEN } from '../src/lib/posthog.ts'
@@ -9,6 +9,14 @@ export const WORKER_EVENT_DOCS: Record<string, { when: string; properties: strin
   mcp_request: {
     when: 'each message to the MCP server at /mcp, and each request its rate limit refuses',
     properties: "the method; for initialize, the client's name and version and the protocol version; for a tool call, the tool, the device ids, screen, orientation, rotation and runtime it names, the number of frames, and whether it failed; a JSON-RPC error code; which rate limit refused it; the HTTP status; the request's User-Agent and Accept headers",
+  },
+  page_served: {
+    when: 'each request for a page, as HTML or as Markdown',
+    properties: "the page's path, when the page exists; whether the answer was HTML or Markdown; the HTTP status; the request's User-Agent and Accept headers",
+  },
+  file_served: {
+    when: 'each request for a data file, llms.txt, llms-full.txt, a Markdown copy by its own address, or a file of the skill',
+    properties: "the file's path, when the file exists; the HTTP status; the request's User-Agent and Accept headers",
   },
 }
 

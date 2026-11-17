@@ -42,6 +42,9 @@ npx wrangler dev                      # dist/ and /mcp as the Worker serves them
 - README.md's skill table is the index of `skills/`. S9 fails a skill directory it does not mention.
 - The PostHog project token and host are written once, as constants in `src/lib/posthog.ts`; the
   pages and the Worker import them (spec 001 §5.5).
+- The paths the Worker runs for are `RUN_WORKER_FIRST` in `worker/routes.ts`, and again
+  `run_worker_first` in `wrangler.jsonc`, which `tests/hosting.test.ts` compares. A new page route
+  goes into `PAGE_ROUTES`; the test fails on a built page or counted file no route matches.
 - The MCP server's limits are `MINUTE_LIMIT` and `DAY_LIMIT` in `worker/ratelimit.ts`, and the
   minute limit again in `wrangler.jsonc`'s `ratelimits`, which `tests/hosting.test.ts` compares.
   `/agents` and `/privacy` print the constants.

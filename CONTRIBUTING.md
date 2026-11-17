@@ -34,7 +34,7 @@ a private one is redacted there before the commit carrying it is pushed.
 | `npm run check` | `site` | astro check: a type error in a page, a component or `src/lib/` |
 | `npm run build` | `site` | a page that fails to render |
 | `npx wrangler dev` | none; run it after changing `wrangler.jsonc`, `public/_headers` or the build | `dist/` and `/mcp` as the Worker serves them: check that each URL answers with its `Content-Type`, an unknown path answers 404, and the headers of `public/_headers` arrive; `tests/hosting.test.ts` reads both files |
-| `npm test` | `site` | vitest: `tests/*.test.ts`, among them one seeded violation per data rule; `tests/site.test.ts` reads `dist/` and fails on a device missing from the home page table or without a page or JSON file, a page without its `.md` copy, a page missing from `llms.txt` or the sitemap, a link to a file the build did not write, and a word joined to the value after it (Astro drops the line break before a line that starts with `{` or an inline element; keep the word and the value on one line); `tests/mcp.test.ts` drives `/mcp` through the Worker's `fetch` with its bindings stubbed; `tests/conformance.test.ts` starts `wrangler dev` on a free port and calls every tool through the MCP TypeScript SDK's client |
+| `npm test` | `site` | vitest: `tests/*.test.ts`, among them one seeded violation per data rule; `tests/site.test.ts` reads `dist/` and fails on a device missing from the home page table or without a page or JSON file, a page without its `.md` copy, a page missing from `llms.txt` or the sitemap, a link to a file the build did not write, and a word joined to the value after it (Astro drops the line break before a line that starts with `{` or an inline element; keep the word and the value on one line); `tests/mcp.test.ts` and `tests/negotiation.test.ts` drive the Worker's `fetch` with its bindings stubbed and the assets read from `dist/`; `tests/conformance.test.ts` starts `wrangler dev` on a free port, calls every tool through the MCP TypeScript SDK's client, and requests every page with `Accept: text/markdown` |
 
 No network and no build: bash, find, grep, awk, perl and python3. `--self-test` builds a valid
 fixture tree in a temporary directory once per seeded violation, and fails if the check it targets
@@ -92,10 +92,21 @@ Each page's content is a `Doc` in `src/lib/pages/`: its title, description, head
   `/privacy` lists; spec 001 §5.5 lists it first. `startAnalytics` starts PostHog on
   `screens.guide` only; `tests/analytics.test.ts` checks the host and the options.
 
-## The MCP server
+## The Worker and the MCP server
 
-`worker/index.ts` is the Worker script. `run_worker_first` in `wrangler.jsonc` sends `/mcp` to it;
-Cloudflare serves every other path from `dist/` without running it.
+`worker/index.ts` is the Worker script. `run_worker_first` in `wrangler.jsonc` sends it the paths
+of `RUN_WORKER_FIRST` in `worker/routes.ts`: `/mcp`, the page routes and the counted files.
+Cloudflare serves every other path from `dist/` without running it, unless no file matches.
+
+- A page route (`PAGE_ROUTES`) answers with the page's `.md` copy when `Accept` names
+  `text/markdown` at least as high as `text/html`, and with the HTML and a `Link` header to the copy
+  otherwise (`worker/site.ts`). Both responses carry `Vary: Accept`. A counted file
+  (`COUNTED_FILES`) is the asset unchanged. Each sends `page_served` or `file_served`.
+- To add a page route, add its pattern to `PAGE_ROUTES` and to `run_worker_first`.
+  `tests/hosting.test.ts` fails when the two lists differ, or when a page or counted file in `dist/`
+  matches no pattern.
+- `public/_headers` applies to every response the Worker takes from `env.ASSETS`, matched on the
+  URL it fetched: a negotiated copy carries the `/*.md` rule's headers.
 
 - `worker/mcp.ts` answers the JSON-RPC methods `initialize`, `ping`, `tools/list` and
   `tools/call`, one JSON response per POST, with no session and no event stream.
@@ -115,7 +126,7 @@ Cloudflare serves every other path from `dist/` without running it.
   lists beside the pages' events. They are sent only for requests to `screens.guide`.
 - `toolEventProperties` in `worker/tools.ts` writes a tool call's event: only enum values, device
   ids and runtimes the dataset knows, and counts. A string the client sent never reaches an event.
-- `public/_headers` does not apply to a response the script builds. `SECURITY_HEADERS` in
+- `public/_headers` does not apply to a response the script builds itself. `SECURITY_HEADERS` in
   `worker/mcp.ts` carries the same headers for `/mcp`.
 - The day limit reads `MCP_DAY_LIMIT` from the environment when it is set, so
   `npx wrangler dev --var MCP_DAY_LIMIT:12` reaches the limit in a few requests. Deploy without it.

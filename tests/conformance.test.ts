@@ -1,14 +1,17 @@
-// The MCP endpoint under the official TypeScript SDK's client (spec 002 §6.1, phase 2), served by
-// `wrangler dev` in workerd with the real rate limiting binding and Durable Object. Needs dist/:
-// run `npm run build` first, as CI does.
+// The Worker under `wrangler dev`, in workerd with the real assets, rate limiting binding and
+// Durable Object (spec 002 §5): the MCP endpoint under the official TypeScript SDK's client, and
+// Markdown by content negotiation with the headers of public/_headers. Needs dist/: run
+// `npm run build` first, as CI does.
 import { type ChildProcess, spawn } from 'node:child_process'
-import { existsSync, mkdtempSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { markdownPath } from '../src/lib/doc.ts'
+import { allPages } from '../src/lib/pages/index.ts'
 
 const ROOT = join(import.meta.dirname, '..')
 const DAY_LIMIT = 30
@@ -31,6 +34,7 @@ const ping = (url: string) =>
 
 let child: ChildProcess
 let url: string
+let origin: string
 let persist: string
 let log = ''
 let requests = 0 // POSTs that passed the origin check, so each one counts against the day limit
@@ -45,7 +49,8 @@ beforeAll(async () => {
   ], { cwd: ROOT, detached: true, env: { ...process.env, WRANGLER_SEND_METRICS: 'false', CI: '1' } })
   child.stdout!.on('data', (d) => { log += d })
   child.stderr!.on('data', (d) => { log += d })
-  url = `http://127.0.0.1:${port}/mcp`
+  origin = `http://127.0.0.1:${port}`
+  url = `${origin}/mcp`
   const start = Date.now()
   for (;;) {
     if (child.exitCode !== null) throw new Error(`wrangler dev exited ${child.exitCode}:\n${log}`)
@@ -108,4 +113,36 @@ describe('the MCP endpoint under the SDK client', () => {
     expect(Number(refused.headers.get('Retry-After'))).toBeGreaterThan(0)
     expect((await refused.json()).error.message).toContain(`${DAY_LIMIT} requests a UTC day`)
   }, 30_000)
+})
+
+describe('the pages under wrangler dev', () => {
+  it("answer each page with its .md copy for Accept: text/markdown, with the copy's headers from public/_headers", async () => {
+    for (const page of allPages()) {
+      const res = await fetch(`${origin}${page.path}`, { headers: { Accept: 'text/markdown' } })
+      expect(res.status, page.path).toBe(200)
+      expect(res.headers.get('Content-Type'), page.path).toBe('text/markdown; charset=utf-8')
+      expect(res.headers.get('Vary'), page.path).toContain('Accept')
+      expect(res.headers.get('Access-Control-Allow-Origin'), page.path).toBe('*')
+      expect(res.headers.get('X-Content-Type-Options'), page.path).toBe('nosniff')
+      expect(await res.text(), page.path).toBe(readFileSync(join(ROOT, 'dist', markdownPath(page.path)), 'utf8'))
+    }
+  }, 30_000)
+
+  it('answer Accept: text/html with the HTML, the Link header and the headers of public/_headers', async () => {
+    const res = await fetch(`${origin}/devices/iphone-17`, { headers: { Accept: 'text/html' } })
+    expect(res.status).toBe(200)
+    expect(res.headers.get('Content-Type')).toBe('text/html; charset=utf-8')
+    expect(res.headers.get('Link')).toBe('</devices/iphone-17.md>; rel="alternate"; type="text/markdown"')
+    expect(res.headers.get('Vary')).toContain('Accept')
+    expect(res.headers.get('Content-Security-Policy')).toContain("frame-ancestors 'none'")
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBeNull()
+  })
+
+  it('serve a counted file as the asset, with its headers', async () => {
+    const res = await fetch(`${origin}/data/v1/devices.json`)
+    expect(res.status).toBe(200)
+    expect(res.headers.get('Cache-Control')).toBe('public, max-age=3600')
+    expect(res.headers.get('Vary')).toBeNull()
+    expect(await res.text()).toBe(readFileSync(join(ROOT, 'dist/data/v1/devices.json'), 'utf8'))
+  })
 })

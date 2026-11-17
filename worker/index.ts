@@ -1,9 +1,12 @@
-// The Worker in front of the site's static assets. `run_worker_first` in wrangler.jsonc sends
-// /mcp here; every other request is an asset, served by Cloudflare without this script.
+// The Worker in front of the site's static assets. `run_worker_first` in wrangler.jsonc sends the
+// routes of worker/routes.ts here: /mcp, the page routes and the counted files. Every other request
+// is an asset, served by Cloudflare without this script, or reaches it only when no asset matches.
 
 import { sendEvents, shouldSend } from './analytics.ts'
 import { type EventProperties, SECURITY_HEADERS, handlePost, jsonResponse } from './mcp.ts'
 import { DailyCount, checkRateLimit } from './ratelimit.ts'
+import { routeKind } from './routes.ts'
+import { serveFile, servePage } from './site.ts'
 import type { Env, ExecutionContext } from './types.ts'
 
 export { DailyCount }
@@ -42,7 +45,11 @@ async function mcp(request: Request, env: Env, ctx: ExecutionContext): Promise<R
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url)
-    if (url.pathname === '/mcp') return mcp(request, env, ctx)
-    return env.ASSETS.fetch(request)
+    const kind = routeKind(url.pathname)
+    if (kind === 'mcp') return mcp(request, env, ctx)
+    if (kind === 'other') return env.ASSETS.fetch(request) // a path with no asset: the 404 page, uncounted
+    const { response, event } = kind === 'page' ? await servePage(request, env, url) : await serveFile(request, env, url)
+    if (shouldSend(url)) ctx.waitUntil(sendEvents(kind === 'page' ? 'page_served' : 'file_served', [event], request))
+    return response
   },
 }

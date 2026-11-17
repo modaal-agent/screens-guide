@@ -61,7 +61,7 @@ export function agentsDoc(): Doc {
       },
       {
         type: 'p',
-        text: 'Every page has a Markdown copy at its path plus `.md`: [/devices/iphone-17.md](/devices/iphone-17.md) for [/devices/iphone-17](/devices/iphone-17), and [/index.md](/index.md) for the home page. The files allow requests from any origin.',
+        text: 'Every page has a Markdown copy at its path plus `.md`: [/devices/iphone-17.md](/devices/iphone-17.md) for [/devices/iphone-17](/devices/iphone-17), and [/index.md](/index.md) for the home page. A request for the page itself with `Accept: text/markdown` gets the copy, and the HTML names it in a `Link` header. The files and the copies allow requests from any origin.',
       },
       { type: 'h2', text: 'Reading the data' },
       {
@@ -164,10 +164,10 @@ export function privacyDoc(): Doc {
         type: 'p',
         text: "With each event, PostHog's library adds the page's address and the referring page, the browser's user agent, name and version, the operating system, the device type, the screen and window sizes, the language and the time zone. PostHog's servers receive each request's IP address; [PostHog's privacy policy](https://posthog.com/privacy) covers what they keep. The site's code that sends the events is `src/lib/analytics.ts` in the [source](https://github.com/modaal-agent/screens-guide).",
       },
-      { type: 'h2', text: 'The MCP server' },
+      { type: 'h2', text: 'Events from the server' },
       {
         type: 'p',
-        text: "The MCP server at `/mcp` sends the event below to the same PostHog project, only for requests to screens.guide itself. The server sends it from Cloudflare, so PostHog receives Cloudflare's address and not yours, and the event asks PostHog to skip its location lookup. Each event has a new random id, so PostHog cannot link two requests, and stores no person profile. No event carries your IP address, the frames you send to `check_layout` or other text you send. The code is `worker/analytics.ts`.",
+        text: "The server that answers the MCP server's address `/mcp`, the pages and the data files sends the events below to the same PostHog project, only for requests to screens.guide itself. It sends them from Cloudflare, so PostHog receives Cloudflare's address and not yours, and each event asks PostHog to skip its location lookup. Each event has a new random id, so PostHog cannot link two requests, and stores no person profile. No event carries your IP address, the frames you send to `check_layout` or other text you send; a path is recorded only for a page or file that exists. The code is `worker/analytics.ts`.",
       },
       {
         type: 'table',
@@ -176,7 +176,7 @@ export function privacyDoc(): Doc {
       },
       {
         type: 'p',
-        text: `To keep the server's limit of ${DAY_LIMIT.toLocaleString('en-US')} requests a UTC day per address, a Cloudflare Durable Object named by the SHA-256 hash of your IP address stores the current UTC date and the number of requests from that address on it. The first request on a new date replaces both. The address itself is not stored. Cloudflare's rate limiting counts the limit of ${MINUTE_LIMIT} a minute, keyed by the address. The code is \`worker/ratelimit.ts\`.`,
+        text: `To keep the MCP server's limit of ${DAY_LIMIT.toLocaleString('en-US')} requests a UTC day per address, a Cloudflare Durable Object named by the SHA-256 hash of your IP address stores the current UTC date and the number of requests from that address on it. The first request on a new date replaces both. The address itself is not stored. Cloudflare's rate limiting counts the limit of ${MINUTE_LIMIT} a minute, keyed by the address. The code is \`worker/ratelimit.ts\`.`,
       },
       { type: 'h2', text: 'Hosting' },
       {

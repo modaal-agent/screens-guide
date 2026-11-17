@@ -39,7 +39,9 @@ npx wrangler dev                      # dist/ and the MCP server as the Worker s
 
 `.github/workflows/deploy.yml` runs the checks, builds the site and runs `npx wrangler deploy` on
 every push to `main`. The Worker `screens-guide` (`wrangler.jsonc`) serves `dist/` as static assets
-at https://screens.guide, and runs `worker/index.ts` for `/mcp`, the MCP server. The workflow needs
+at https://screens.guide, and runs `worker/index.ts` for the routes in `worker/routes.ts`: `/mcp`,
+the MCP server; the pages, which it answers with HTML or their Markdown copy by the `Accept` header;
+and the data and text files, which it counts. The workflow needs
 the repository secret `CLOUDFLARE_API_TOKEN` and the repository variable `CLOUDFLARE_ACCOUNT_ID`.
 
 ## Layout
@@ -58,7 +60,7 @@ the repository secret `CLOUDFLARE_API_TOKEN` and the repository variable `CLOUDF
 | `src/lib/pages/` | each page's content as blocks (`src/lib/doc.ts`), rendered as HTML by `DocBlocks.astro` and as the page's `.md` copy |
 | `src/pages/`, `src/components/`, `src/layouts/`, `src/styles/` | the pages and the data and text files, built by Astro into `dist/`; every number on them comes from `data/devices.json` |
 | `astro.config.mjs`, `tsconfig.json` | the build: one `.html` file per page, no trailing slashes |
-| `worker/` | the Worker script: the MCP server at `/mcp`, its tools, its rate limit and its usage events |
+| `worker/` | the Worker script: the MCP server at `/mcp` with its tools and rate limit, Markdown by content negotiation, and the usage events |
 | `scripts/check-data.ts`, `tests/` | `npm run check:data`, and the vitest files |
 | `scripts/check-agent-rules.sh` | the comparison of `AGENTS.md` with `CLAUDE.md` |
 | `scripts/check-skills.sh` | the checks on skills, plugin manifests and specs, with `--self-test` |

@@ -225,9 +225,9 @@ describe('the MCP server on the pages', () => {
     }
   })
 
-  it("lists the server's event and the day count it keeps on /privacy", () => {
+  it("lists the server's events and the day count it keeps on /privacy", () => {
     const page = text(file('privacy.html'))
-    expect(page).toContain('mcp_request')
+    for (const event of ['mcp_request', 'page_served', 'file_served']) expect(page).toContain(event)
     expect(page).toContain('SHA-256 hash of your IP address')
     expect(page).toContain('worker/ratelimit.ts')
   })
