@@ -1,7 +1,7 @@
 # 001 — The site and the dataset
 
 **Status:** Written 2026-11-17, revised in place the same day with the answers to §10.1 to §10.8.
-Not implemented. **Baseline:** `main` at `77f08eb`, the repository files.
+Phase 3 implemented (§7.1). **Baseline:** `main` at `77f08eb`, the repository files.
 **Obsoletes:** nothing.
 
 **Relates to:**
@@ -70,7 +70,7 @@ split-window rows marked as estimates, which this spec leaves out (D5).
 | iPhone 16 | iOS 18.6, 26.5, 27.0, 27.2, 27.3 beta | portrait on each; landscape on 18.6, 27.0, 27.2 |
 | iPhone 16 Pro Max | iOS 18.6 | portrait |
 | iPhone 17 | iOS 27.0, 27.2, 27.3 beta | portrait on each; landscape on 27.0 |
-| iPhone 17 Pro | iOS 27.0, 27.2 | portrait; landscape on 27.2 |
+| iPhone 17 Pro | iOS 27.0 | portrait |
 | iPhone 17 Pro Max | iOS 26.5, 27.0 | portrait on each; landscape on 26.5 |
 | iPhone 17e | iOS 27.2, 27.3 beta | portrait |
 | iPhone Air | iOS 27.0, 27.2, 27.3 beta | portrait on each; landscape on 27.0 |
@@ -105,7 +105,7 @@ What a reading holds, by group:
   16 pt on the iPhone SE (3rd generation), 16, 17, 17e and 18 Pro; 20 pt on the iPhone Air, the
   18 Pro Max, the iPads and the iPhone Duo.
 - **Regions:** the occlusion regions UIKit reports (the iPhone 16's top strip 393 × 54, the
-  iPhone 17 Pro's 402 × 54, the iPhone Duo's camera and status block), the Android cutout's
+  iPad (A16)'s 32 pt strip, the iPhone Duo's camera and status block), the Android cutout's
   rectangle in pixels (the Pixel 8 `[479, 0, 601, 132]`), and the folds: bounds, the margins of the
   iPhone Duo's 40 pt division band, whether the fold separates the halves, and the hinge angle
   ranges of each posture.
@@ -136,6 +136,10 @@ Values that differ between two ways of reading them:
   21.5, the profile's values. On the iPhones the two readings agree (§10.7).
 - The device catalog rounds Android values to whole dp (Pixel 8 status bar 50). The pixel readings
   give 132 px at 420 dpi, 50.29 dp. The dataset takes the pixel readings (§2.3).
+
+A run on 2026-09-30 read the iPhone 17 Pro in portrait and landscape, with a 402 × 54 occlusion
+region, on an iOS 27.2 build it did not record. The dataset keys each reading by build (§2.2), so
+the export leaves that run out; spec 003's R2 reads every iPhone in both orientations.
 
 No run measured: keyboard heights; Display Zoom; iPad split and Stage Manager windows (the catalog's
 rows for them are estimates); the corner radii of the Pixel Fold and the small phone (their
@@ -228,38 +232,45 @@ names checked before the purchase are in D1.
 
 ### 2.2 A reading
 
-The top level holds `version` (§2.4), `updated` (a date), `license` (`CC-BY-4.0`, D12), `units` and
-`devices`. A
-device holds `id`, `name`, `platform` (`ios`, `android`), `kind` (`phone`, `tablet`, `foldable`),
-`unit` (`pt`, `dp`), `display` and `readings`. For a foldable, `screens` names each pose's screen
-(`closed`, `open`, `half-open`, `tent`) and its display.
+The top level holds `version` (§2.4), `updated` (a date), `license` (`CC-BY-4.0`, D12), `units`,
+`runs` and `devices`. `runs` describes each measurement run by id: its date, simulator or
+emulator, and what it reads. A device holds `id`, `name`, `platform` (`ios`, `android`), `kind`
+(`phone`, `tablet`, `foldable`), `unit` (`pt`, `dp`), `displays`, `current` and `readings`.
+`displays` holds each display by id (`main`; `cover` and `inner` on a foldable) with its size in
+the device's unit, its pixels, its `scale` (iOS) or `density` (Android) and the cutout's kind. For
+a foldable, `screens` names each pose's screen (`closed`, `open`, `half-open`, `tent`) and its
+display.
 
-One reading of the iPhone 17 in portrait on iOS 27.0:
+One reading of the iPhone 17 in portrait on iOS 27.0, from `data/devices.json` 1.0.0:
 
 ```json
 {
   "runtime": { "os": "iOS", "version": "27.0", "build": "24A434", "prerelease": false },
-  "measured": { "on": "simulator", "date": "2026-10-14" },
+  "measured": { "on": "simulator", "date": "2026-11-09",
+                "runs": ["ios-2026-10-14", "ios-runtimes-2026-11-09", "ios-tabbar-2026-11-01"] },
   "screen": "main",
   "orientation": "portrait",
+  "rotation": 0,
   "window": { "width": 402, "height": 874 },
   "pixels": { "width": 1206, "height": 2622 },
   "safeAreaInsets": { "top": 62, "bottom": 34, "left": 0, "right": 0 },
   "cornerRadii": {
     "profile": { "topLeft": 62, "topRight": 62, "bottomRight": 62, "bottomLeft": 62,
-                 "source": "the simulator's device profile" },
-    "measured": null
+                 "source": "the simulator's device profile (capabilities.plist), read 2026-11-17" },
+    "measured": { "topLeft": 62, "topRight": 62, "bottomRight": 62, "bottomLeft": 62,
+                  "source": "SwiftUI concentricCornerRadii of a view that fills the window, iOS 27.0 (24A434)" }
   },
   "sizeClass": { "width": "compact", "height": "regular" },
   "statusBar": { "placement": "top", "frame": { "x": 0, "y": 0, "width": 402, "height": 54 } },
-  "navigationBar": { "inline": { "top": 62, "height": 54 }, "large": null },
-  "tabBar": { "style": "capsule", "bottom": 21, "height": 62, "sideGap": 21 },
-  "contentMargin": 16,
-  "regions": [],
+  "navigationBar": { "inline": { "top": 62, "height": 54 }, "large": { "top": 62, "height": 106 } },
+  "tabBar": { "style": "capsule", "frame": { "x": 64, "y": 791, "width": 274, "height": 62 },
+              "bottom": 21, "height": 62, "sideGap": 21 },
+  "contentMargin": null,
+  "regions": null,
   "fold": null,
   "missing": {
-    "navigationBar.large": "not read on this runtime",
-    "cornerRadii.measured": "not read on this runtime"
+    "contentMargin": "not read on this runtime",
+    "regions": "not read on this device"
   }
 }
 ```
@@ -267,18 +278,34 @@ One reading of the iPhone 17 in portrait on iOS 27.0:
 - Every position is in the device's unit, in window coordinates, origin at the window's top left,
   for that orientation. `cornerRadii` is given for the orientation, so a consumer does no rotation
   (D7).
+- `orientation` is the window's shape. `rotation` is the angle from the display's natural
+  orientation (UIKit's portrait on iOS): at 90 the device's top edge is on the window's left,
+  UIKit's `landscapeRight` and Android's `ROTATION_90`. A device read in both landscapes has a
+  reading at 90 and at 270.
+- `measured.runs` names the runs the reading's values come from; `measured.date` is the newest of
+  their dates. Two runs that read one value for the same device, build, screen and rotation agree
+  within 0.01, or the export stops (§2.3).
 - `cornerRadii` holds two value sets, `profile` and `measured`, each with a `source` that says
   where it came from (§2.3, D13).
 - `statusBar.placement` is `top`, `hidden`, `left`, `right` or `navigation-bar` (the iPhone Duo's
   tall inner window, where the time sits in the navigation bar's row).
-- `tabBar.style` is `capsule` (iOS 26 and later), `bar` (iOS 18 and Android's navigation bar),
-  `column` (the iPhone Duo, in a side inset) or `null` where the platform puts none at the bottom.
-- `regions` lists occlusion regions with `kind`, `frame` and `active`.
+- `navigationBar` is UIKit's bar with an inline and with a large title; on Android, `inline` is
+  Material 3's `TopAppBar` inside the safe area.
+- `tabBar.style` is `capsule` (iOS 26 and later), `bar` (iOS 18 and Android's navigation bar) or
+  `column` (the iPhone Duo, in a side inset). `frame` holds three tabs; `sideGap` is the capsule's
+  smallest gap to a side edge with five tabs with long titles. On the iPads the tab bar sits at
+  the top, so `tabBar` is `null` with that reason.
+- Android readings add `systemBarInsets` and `cutoutInsets` beside the combined `safeAreaInsets`,
+  and `sizeClassV2` beside `sizeClass` (the window size classes V1 and V2).
+- `regions` lists occlusion regions and the Android display cutout with `kind`, `frame` and
+  `active`.
 - `fold` holds `axis`, `frame`, `margin` and `separates`.
-- A field no run measured is `null`, and `missing` gives the reason per field (D5).
+- A field no run measured is `null`, and `missing` gives the reason per field path (D5). A screen
+  with no hinge across it has a `null` `fold` with no reason.
 
-A device's `current` names the reading set a page shows first: the newest runtime that is not a
-pre-release and has a reading in each orientation the device has (D6, D14).
+A device's `current` names the reading set a page shows first, by version and build: the newest
+build that is not a pre-release and has a reading in each screen and rotation the device has (D6,
+D14). Where no build has them all, it is the build with the most, newest first.
 
 ### 2.3 Rules the exporter applies
 
@@ -543,6 +570,7 @@ Commit subjects carry the prefix `[001-site-and-dataset]`.
 | --- | --- | --- |
 | 1 | `52aa47d`, with specs 002 and 003 | — |
 | 2 | `77f08eb`, the repository's first commit | landed before phase 1, the spec; `scripts/check-skills.sh` and the `skills` job added beside the agent rules check; turning on private vulnerability reporting, which `SECURITY.md` names, added to the user's steps (§5.3) |
+| 3 | `37a3da0`, with the exporter's two commits in the private measurement repository (E13) | the reading of §2.2 gained `rotation`, `measured.runs`, the top-level `runs`, `displays` keyed by display (the plan had one `display`), `screens` for the foldables only, the Android fields `systemBarInsets`, `cutoutInsets` and `sizeClassV2`, `tabBar.frame`, and `prerelease` on every runtime; the iPhone 17 Pro's 27.2 run left out because it recorded no build (§1.2); `ajv` 8.20.0 added for the schema check; the CI job is `site`, which phase 4 extends with the build |
 
 ---
 
