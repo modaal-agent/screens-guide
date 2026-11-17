@@ -1,8 +1,29 @@
 // Pixel snapping and corner fit, worked out on the measured devices.
 
+import type { PlayDevice } from '../../islands/Playgrounds.tsx'
 import type { Doc } from '../doc.ts'
-import { DEVICES, headlineReading, num, runtimeLabel } from '../data.ts'
+import { DEVICES, compareRuntimes, headlineReading, num, runtimeLabel } from '../data.ts'
 import { concentricRadius, cornerDepth } from '../geometry.ts'
+
+/** What the playground islands need of each device: its scale, display, corner radius, margin and bottom inset. */
+export function playDevices(): PlayDevice[] {
+  return DEVICES.map((d) => {
+    const head = headlineReading(d)
+    const disp = Object.values(d.displays)[0]
+    const margin = [...d.readings].sort((a, b) => compareRuntimes(b.runtime, a.runtime))
+      .find((r) => r.contentMargin !== null && r.screen === head.screen && r.rotation === head.rotation)
+    return {
+      id: d.id,
+      name: d.name,
+      unit: d.unit,
+      perUnit: d.platform === 'ios' ? disp.scale ?? 1 : (disp.density ?? 160) / 160,
+      display: { width: disp.width, height: disp.height },
+      radius: head.cornerRadii.profile?.bottomLeft || null,
+      margin: margin?.contentMargin ?? null,
+      bottom: head.safeAreaInsets?.bottom ?? null,
+    }
+  })
+}
 
 /** Every pixels-per-unit the dataset's devices have, with the devices that have it. */
 export function pixelScales(): { perUnit: number; unit: string; names: string[] }[] {

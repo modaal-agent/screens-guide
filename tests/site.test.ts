@@ -1,5 +1,6 @@
 // Checks on the built site in dist/. Run `npm run build` before `npm test`; CI's
 // site job builds first.
+import { createHash } from 'node:crypto'
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -92,6 +93,59 @@ describe('the pages', () => {
       }
     }
     expect(broken).toEqual([])
+  })
+})
+
+describe('the content security policy', () => {
+  const sha256 = (s: string) => `'sha256-${createHash('sha256').update(s).digest('base64')}'`
+  const policy = (html: string) => {
+    const m = html.match(/<meta http-equiv="content-security-policy" content="([^"]*)"/)
+    if (!m) return null
+    return Object.fromEntries(m[1].split(';').map((d) => d.trim()).filter(Boolean).map((d) => {
+      const [name, ...values] = d.split(/\s+/)
+      return [name, values]
+    })) as Record<string, string[]>
+  }
+
+  it('is on every page, with the PostHog EU host the only other origin', () => {
+    for (const f of files('.html')) {
+      const p = policy(readFileSync(f, 'utf8'))
+      expect(p, relative(DIST, f)).not.toBeNull()
+      expect(p!['default-src']).toEqual(["'self'"])
+      expect(p!['connect-src']).toEqual(["'self'", 'https://eu.i.posthog.com'])
+      expect(p!['script-src'][0]).toBe("'self'")
+      expect(p!['script-src'].slice(1).every((s) => s.startsWith("'sha256-"))).toBe(true)
+      expect(p!['style-src'][0]).toBe("'self'")
+    }
+  })
+
+  it("allows each page's inline scripts and styles by hash, and no style attribute", () => {
+    for (const f of files('.html')) {
+      const html = readFileSync(f, 'utf8')
+      const p = policy(html)!
+      for (const m of html.matchAll(/<script(?![^>]*\bsrc=)([^>]*)>([\s\S]*?)<\/script>/g)) {
+        if (m[1].includes('application/ld+json')) continue
+        expect(p['script-src'], `${relative(DIST, f)}: inline script`).toContain(sha256(m[2]))
+      }
+      for (const m of html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)) {
+        expect(p['style-src'], `${relative(DIST, f)}: inline style`).toContain(sha256(m[1]))
+      }
+      expect(html, relative(DIST, f)).not.toMatch(/\sstyle="/)
+      expect(html, relative(DIST, f)).not.toMatch(/<script[^>]*\bsrc="https?:/)
+    }
+  })
+
+  // An island that imports src/lib/data.ts ships all of data/devices.json to the browser.
+  it('ships no copy of the dataset in a script', () => {
+    const runIds = Object.keys(data.runs)
+    for (const f of files('.js', join(DIST, '_astro'))) {
+      const js = readFileSync(f, 'utf8')
+      expect(runIds.filter((id) => js.includes(id)), relative(DIST, f)).toEqual([])
+    }
+  })
+
+  it('loads PostHog only by dynamic import, never from a page', () => {
+    for (const f of files('.html')) expect(readFileSync(f, 'utf8'), relative(DIST, f)).not.toContain('module.slim.no-external')
   })
 })
 

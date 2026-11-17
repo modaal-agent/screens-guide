@@ -44,6 +44,8 @@ npm run dev                           # the site at http://localhost:4321, rebui
 | `data/devices.json` | the dataset, written by an export from the measurement runs, never by hand |
 | `data/schema.json`, `data/CHANGELOG.md` | its JSON Schema, and one entry per dataset version |
 | `src/lib/` | the code the checks and the site share: the dataset's types, the data checks, the geometry, the table rows, the CSV and the files for agents |
+| `src/islands/` | the Preact islands: the explorer, the comparison and the playgrounds |
+| `src/lib/analytics.ts` | PostHog's token, host and options, the events and their `/privacy` rows |
 | `src/lib/pages/` | each page's content as blocks (`src/lib/doc.ts`), rendered as HTML by `DocBlocks.astro` and as the page's `.md` copy |
 | `src/pages/`, `src/components/`, `src/layouts/`, `src/styles/` | the pages and the data and text files, built by Astro into `dist/`; every number on them comes from `data/devices.json` |
 | `astro.config.mjs`, `tsconfig.json` | the build: one `.html` file per page, no trailing slashes |

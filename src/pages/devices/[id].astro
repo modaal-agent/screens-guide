@@ -1,10 +1,10 @@
 ---
-import DeviceDrawing from '../../components/DeviceDrawing.astro'
 import DocPage from '../../components/DocPage.astro'
 import Legend from '../../components/Legend.astro'
+import Explorer from '../../islands/Explorer.tsx'
 import type { Device } from '../../lib/dataset.ts'
-import { DEVICES, SCREEN_LABEL, rotationLabel, size } from '../../lib/data.ts'
-import { deviceDoc, figureReadings } from '../../lib/pages/device.ts'
+import { DEVICES } from '../../lib/data.ts'
+import { deviceDoc } from '../../lib/pages/device.ts'
 
 export function getStaticPaths() {
   return DEVICES.map((device) => ({ params: { id: device.id }, props: { device } }))
@@ -15,18 +15,12 @@ interface Props {
 }
 
 const { device: d } = Astro.props
+const links = DEVICES.map(({ id, name, platform }) => ({ id, name, platform }))
 ---
 <DocPage doc={deviceDoc(d)}>
   <Fragment slot="drawings">
-    <h2>The current reading</h2>
-    <div class="figures">
-      {figureReadings(d).map((r) => (
-        <figure>
-          <DeviceDrawing device={d} reading={r} />
-          <figcaption>{SCREEN_LABEL[r.screen]}, {rotationLabel(r)}: {size(r.window)} {d.unit}</figcaption>
-        </figure>
-      ))}
-    </div>
+    <h2>Explore the readings</h2>
+    <Explorer client:visible device={d} devices={links} />
     <Legend />
   </Fragment>
 </DocPage>

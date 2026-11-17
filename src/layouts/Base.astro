@@ -61,5 +61,10 @@ const fullTitle = path === '/' ? title : `${title} · screens.guide`
         <span>Data <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>, code MIT</span>
       </div>
     </footer>
+    <script>
+      import { startAnalytics, trackDataLinks } from '../lib/analytics.ts'
+      trackDataLinks(document)
+      startAnalytics(location.hostname)
+    </script>
   </body>
 </html>

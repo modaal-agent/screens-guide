@@ -1,6 +1,7 @@
 // The pages about the data rather than the devices: for agents, the method, the changelog and
 // privacy.
 
+import { EVENT_DOCS, POSTHOG_HOST } from '../analytics.ts'
 import type { Block, Doc } from '../doc.ts'
 import { DATA, DEVICES, readingCount } from '../data.ts'
 import { DATA_LICENSE, SITE } from '../site.ts'
@@ -118,13 +119,28 @@ export function privacyDoc(): Doc {
   return {
     path: '/privacy',
     title: 'Privacy',
-    description: 'What screens.guide collects: no cookies, and the requests Cloudflare logs.',
+    description: 'What screens.guide collects: usage events in PostHog\'s EU region without cookies, and the requests Cloudflare logs.',
     h1: 'Privacy',
     blocks: [
       {
         type: 'p',
         text: "screens.guide sets no cookie and writes nothing to your browser's local or session storage. Its pages load scripts and styles from screens.guide only.",
       },
+      { type: 'h2', text: 'Usage events' },
+      {
+        type: 'p',
+        text: `The pages send the events below to [PostHog](https://posthog.com), which stores them in its EU region (\`${POSTHOG_HOST}\`). They are sent only from screens.guide itself, in PostHog's cookieless mode: PostHog's servers compute a hash in place of a visitor id, and nothing is stored in your browser. No event carries text you type.`,
+      },
+      {
+        type: 'table',
+        head: ['Event', 'Sent when', 'Carries'],
+        rows: Object.entries(EVENT_DOCS).map(([name, e]) => ({ cells: [`\`${name}\``, e.when, e.properties] })),
+      },
+      {
+        type: 'p',
+        text: "With each event, PostHog's library adds the page's address and the referring page, the browser's user agent, name and version, the operating system, the device type, the screen and window sizes, the language and the time zone. PostHog's servers receive each request's IP address; [PostHog's privacy policy](https://posthog.com/privacy) covers what they keep. The site's code that sends the events is `src/lib/analytics.ts` in the [source](https://github.com/modaal-agent/screens-guide).",
+      },
+      { type: 'h2', text: 'Hosting' },
       {
         type: 'p',
         text: "Cloudflare serves the site and keeps its own logs of the requests it serves, under [Cloudflare's privacy policy](https://www.cloudflare.com/privacypolicy/).",

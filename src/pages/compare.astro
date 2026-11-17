@@ -1,34 +1,17 @@
 ---
-// The comparison: outlines of the chosen devices' current readings, to scale, from the top left.
+// The comparison: outlines of the chosen devices' current readings, to scale. The island reads ?ids=.
 import DocPage from '../components/DocPage.astro'
-import { insets, size } from '../lib/data.ts'
-import { cornerTuple, roundedRectPath } from '../lib/drawing.ts'
-import { compareDoc, compared } from '../lib/pages/compare.ts'
+import Compare from '../islands/Compare.tsx'
+import { COMPARE_DEFAULT, DEVICES, headlineReading } from '../lib/data.ts'
+import { COMPARE_MAX, compareDoc } from '../lib/pages/compare.ts'
 
-const shown = compared()
-const width = Math.max(...shown.map((s) => s.r.window.width))
-const height = Math.max(...shown.map((s) => s.r.window.height))
-const pad = Math.max(width, height) * 0.02
+const entries = DEVICES.map((d) => {
+  const r = headlineReading(d)
+  return { id: d.id, name: d.name, unit: d.unit, window: r.window, insets: r.safeAreaInsets, corners: r.cornerRadii.profile ?? r.cornerRadii.measured }
+})
 ---
 <DocPage doc={compareDoc()}>
   <Fragment slot="drawing">
-    <figure>
-      <svg class="device" viewBox={`${-pad} ${-pad} ${width + 2 * pad} ${height + 2 * pad}`} role="img" aria-label="Device outlines to scale">
-        {shown.map(({ r }, n) => {
-          const i = r.safeAreaInsets
-          return (
-            <g class={`compare-${n + 1}`}>
-              <path class="d-outline" d={roundedRectPath(0, 0, r.window.width, r.window.height, cornerTuple(r.cornerRadii.profile ?? r.cornerRadii.measured))} stroke-width="2" vector-effect="non-scaling-stroke" />
-              {i && <rect class="d-outline" x={i.left} y={i.top} width={r.window.width - i.left - i.right} height={r.window.height - i.top - i.bottom} stroke-dasharray="6 4" stroke-width="1" vector-effect="non-scaling-stroke" />}
-            </g>
-          )
-        })}
-      </svg>
-    </figure>
-    <ul class="legend">
-      {shown.map(({ d, r }, n) => (
-        <li><i class={`swatch-${n + 1}`}></i><a href={`/devices/${d.id}`}>{d.name}</a>: {size(r.window)} {d.unit}{r.safeAreaInsets ? `, insets ${insets(r.safeAreaInsets)}` : ''}</li>
-      ))}
-    </ul>
+    <Compare client:visible entries={entries} defaults={COMPARE_DEFAULT} max={COMPARE_MAX} />
   </Fragment>
 </DocPage>

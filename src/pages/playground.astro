@@ -1,5 +1,20 @@
 ---
 import DocPage from '../components/DocPage.astro'
-import { playgroundDoc } from '../lib/pages/playground.ts'
+import { CornerFit, PixelSnapping, ThisDevice } from '../islands/Playgrounds.tsx'
+import { playDevices, playgroundDoc } from '../lib/pages/playground.ts'
+
+const devices = playDevices()
 ---
-<DocPage doc={playgroundDoc()} />
+<DocPage doc={playgroundDoc()}>
+  <Fragment slot="this-device">
+    <h2 id="this-device">This device</h2>
+    <p>Your browser's screen size, pixel ratio and safe-area insets, and the measured device closest to them. Nothing leaves the page except the closest device's id, in the usage event the privacy page lists.</p>
+    <ThisDevice client:visible devices={devices} />
+  </Fragment>
+  <Fragment slot="pixel-snapping">
+    <PixelSnapping client:visible devices={devices} initial="iphone-17" />
+  </Fragment>
+  <Fragment slot="corner-fit">
+    <CornerFit client:visible devices={devices} initial="iphone-17" />
+  </Fragment>
+</DocPage>

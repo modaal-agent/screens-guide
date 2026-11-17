@@ -153,3 +153,43 @@ svg.device { display: block; width: 100%; height: auto; max-height: 520px; }
 dl.facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; }
 dl.facts dt { color: var(--muted); }
 dl.facts dd { margin: 0; }
+
+/* The islands: pickers, the explorer, the comparison and the playgrounds. */
+.pickers { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 0.8em 0; }
+.pickers label { display: flex; flex-direction: column; gap: 2px; font-size: 0.85rem; color: var(--muted); }
+select, input[type='number'] {
+  font: inherit; font-size: 0.95rem; color: var(--text); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; max-width: 100%;
+}
+input[type='number'] { width: 7rem; }
+.input-unit { display: inline-flex; align-items: center; gap: 6px; color: var(--text); }
+.explorer-body { display: grid; grid-template-columns: minmax(220px, 340px) 1fr; gap: 16px; align-items: start; }
+@media (max-width: 720px) { .explorer-body { grid-template-columns: 1fr; } }
+.explorer-body figure svg.device { max-height: 560px; }
+.explorer-table tbody tr[tabindex] { cursor: default; }
+.explorer-table tbody tr.hl th, .explorer-table tbody tr.hl td { background: var(--accent-soft); }
+.explorer-table tbody tr:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+fieldset { border: 1px solid var(--line); border-radius: 6px; margin: 8px 0; padding: 6px 10px; }
+legend { font-size: 0.85rem; color: var(--muted); padding: 0 4px; }
+.layers { display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: 0.85rem; }
+.layers label, .compare-controls label { display: inline-flex; align-items: center; gap: 4px; }
+.compare-picks { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 2px 12px; font-size: 0.9rem; }
+.compare-controls { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.compare-controls .compare-picks { flex: 1 1 100%; }
+.playground { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 4px 14px; margin: 0.8em 0 1.2em; max-width: 46rem; }
+.result { font-variant-numeric: tabular-nums; }
+.corner-fit { display: grid; grid-template-columns: 160px 1fr; gap: 16px; align-items: center; }
+@media (max-width: 520px) { .corner-fit { grid-template-columns: 1fr; } }
+svg.corner { width: 160px; height: 160px; }
+.d-frame { fill: none; stroke: var(--draw-margin); }
+.d-point { fill: var(--draw-margin); }
+.d-frame.cut { stroke: var(--draw-safe); }
+.d-point.cut { fill: var(--draw-safe); }
+/* The drawing layer a hovered or focused table row shows. */
+svg.device .hl { stroke: var(--accent); stroke-width: 3px; }
+svg.device .d-inset.hl { fill: var(--draw-safe); fill-opacity: 0.3; }
+/* Reads env(safe-area-inset-*) for "this device"; never shown. */
+.safe-probe {
+  position: fixed; inset: 0 auto auto 0; visibility: hidden; pointer-events: none;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}

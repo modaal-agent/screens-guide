@@ -76,6 +76,21 @@ Each page's content is a `Doc` in `src/lib/pages/`: its title, description, head
 - Write each sentence of an `.astro` file's own text on one line with the values in it: Astro drops
   the line break before a line that starts with `{` or an inline element.
 
+## Islands, analytics and the content security policy
+
+- An island is a Preact component in `src/islands/`, hydrated with `client:visible`. It imports
+  `src/lib/format.ts`, `rows.ts`, `drawing.ts` and `geometry.ts`, never `src/lib/data.ts`, which
+  would put all of `data/devices.json` into the browser bundle; the page passes it what it needs as
+  props. `tests/site.test.ts` fails when a script under `dist/_astro/` holds a run id of the
+  dataset.
+- `astro.config.mjs` sets the content security policy (`security.csp`). Astro writes it into each
+  page's `<meta>` tag with the hashes of the inline scripts and styles it writes for the islands.
+  Write no other inline `<script>` (JSON-LD excepted) and no `style` attribute: `tests/site.test.ts`
+  checks every page. Set a style from an island through the DOM, which the policy allows.
+- An event is a key of `Events` in `src/lib/analytics.ts` and a row of `EVENT_DOCS`, which
+  `/privacy` lists; spec 001 §5.5 lists it first. `startAnalytics` starts PostHog on
+  `screens.guide` only; `tests/analytics.test.ts` checks the host and the options.
+
 ## Skills, the plugin and the eval cases
 
 The skill and the plugin arrive with spec 002 phase 4. They follow this layout:

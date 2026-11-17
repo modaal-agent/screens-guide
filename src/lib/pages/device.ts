@@ -1,23 +1,12 @@
 // A device's page: its facts, its current reading drawn, and a table per screen and rotation.
 
-import type { Device, Reading } from '../dataset.ts'
+import type { Device } from '../dataset.ts'
 import type { Doc, Table } from '../doc.ts'
 import {
   SCREEN_LABEL, compareRuntimes, currentReadings, groups, insets, rotationLabel, runtimeLabel, runtimes, scaleLabel, size,
   unitName,
 } from '../data.ts'
 import { rowsFor } from '../rows.ts'
-
-/** The readings drawn on the page: per screen, the current build's first rotation and the first one turned. */
-export function figureReadings(d: Device): Reading[] {
-  const current = currentReadings(d)
-  return (d.screens ? d.screens.map((s) => s.id) : ['main']).flatMap((screen) => {
-    const own = current.filter((r) => r.screen === screen).sort((a, b) => a.rotation - b.rotation)
-    const first = own[0]
-    const turned = own.find((r) => first && r.orientation !== first.orientation)
-    return [first, turned].filter((r) => r !== undefined)
-  })
-}
 
 /** A row per field and a column per runtime build, oldest first. */
 export function readingTable(d: Device, screen: string, rotation: number, builds?: string[]): Table {
