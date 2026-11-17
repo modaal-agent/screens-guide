@@ -1,14 +1,16 @@
 // The skill's files against the dataset (spec 002 §4.1): references/devices.md is the generator's
 // output, and every number SKILL.md quotes is recomputed here from data/devices.json, so a dataset
 // change that moves one fails until the skill is edited.
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { crc32, inflateRawSync } from 'node:zlib'
 import { describe, expect, it } from 'vitest'
 import data from '../data/devices.json' with { type: 'json' }
 import type { Dataset, Device, Reading } from '../src/lib/dataset.ts'
 import { compareRuntimes } from '../src/lib/format.ts'
 import { concentricRadius, cornerDepth, round2 } from '../src/lib/geometry.ts'
 import { skillReference } from '../src/lib/skill-reference.ts'
+import { zip } from '../src/lib/zip.ts'
 
 const ROOT = join(import.meta.dirname, '..')
 const DATA = data as unknown as Dataset
@@ -148,5 +150,64 @@ describe("SKILL.md's numbers", () => {
       duoLandscape.fold!.frame.width === 40 && duoLandscape.fold!.frame.x === 455.5)
     const camera = duo.regions!.find((g) => g.kind === 'occlusion')!.frame
     claim('the camera at 535, 0, 134 × 82 pt in portrait, open', camera.x === 535 && camera.y === 0 && camera.width === 134 && camera.height === 82)
+  })
+})
+
+/** The entries of a ZIP archive, read from its central directory, each inflated and its CRC checked. */
+function unzip(archive: Buffer): { name: string; data: Buffer; date: number; time: number }[] {
+  const end = archive.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]))
+  const count = archive.readUInt16LE(end + 10)
+  let p = archive.readUInt32LE(end + 16)
+  const out = []
+  for (let i = 0; i < count; i++) {
+    expect(archive.readUInt32LE(p)).toBe(0x02014b50)
+    const [method, time, date, crc, packed, size, nameLength, extra, comment, local] = [
+      archive.readUInt16LE(p + 10), archive.readUInt16LE(p + 12), archive.readUInt16LE(p + 14), archive.readUInt32LE(p + 16),
+      archive.readUInt32LE(p + 20), archive.readUInt32LE(p + 24), archive.readUInt16LE(p + 28), archive.readUInt16LE(p + 30),
+      archive.readUInt16LE(p + 32), archive.readUInt32LE(p + 42),
+    ]
+    const name = archive.toString('utf8', p + 46, p + 46 + nameLength)
+    expect(archive.readUInt32LE(local), name).toBe(0x04034b50)
+    const start = local + 30 + archive.readUInt16LE(local + 26) + archive.readUInt16LE(local + 28)
+    expect(method, name).toBe(8)
+    const data = inflateRawSync(archive.subarray(start, start + packed))
+    expect(data.length, name).toBe(size)
+    expect(crc32(data), name).toBe(crc)
+    out.push({ name, data, date, time })
+    p += 46 + nameLength + extra + comment
+  }
+  return out
+}
+
+describe('the zip writer', () => {
+  it('writes the same bytes from the same input, and archives that read back', () => {
+    const entries = [{ name: 'a/SKILL.md', data: Buffer.from('# A\n') }, { name: 'a/references/b.md', data: Buffer.from('b'.repeat(1000)) }]
+    const one = Buffer.from(zip(entries, new Date('2026-11-17T00:00:00Z')))
+    expect(Buffer.from(zip(entries, new Date('2026-11-17T00:00:00Z'))).equals(one)).toBe(true)
+    const read = unzip(one)
+    expect(read.map((e) => e.name)).toEqual(['a/SKILL.md', 'a/references/b.md'])
+    expect(read[1].data.toString()).toBe('b'.repeat(1000))
+    expect(read[0].date).toBe(((2026 - 1980) << 9) | (11 << 5) | 17)
+    expect(read[0].time).toBe(0)
+  })
+})
+
+describe("the build's copies of the skill", () => {
+  const DIST = join(ROOT, 'dist')
+  const source = (path: string) => readFileSync(join(ROOT, 'skills/screens-guide', path))
+
+  it('serves each file of skills/screens-guide/ under /skills/screens-guide/', () => {
+    if (!existsSync(DIST)) throw new Error('dist/ is missing: run npm run build first')
+    for (const path of ['SKILL.md', 'references/devices.md']) {
+      expect(readFileSync(join(DIST, 'skills/screens-guide', path)).equals(source(path)), path).toBe(true)
+    }
+  })
+
+  it('writes /skills/screens-guide.zip with the skill folder at its root, dated the dataset', () => {
+    const entries = unzip(readFileSync(join(DIST, 'skills/screens-guide.zip')))
+    expect(entries.map((e) => e.name)).toEqual(['screens-guide/SKILL.md', 'screens-guide/references/devices.md'])
+    for (const e of entries) expect(e.data.equals(source(e.name.slice('screens-guide/'.length))), e.name).toBe(true)
+    const [y, m, d] = DATA.updated.split('-').map(Number)
+    expect(entries[0].date).toBe(((y - 1980) << 9) | (m << 5) | d)
   })
 })

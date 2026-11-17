@@ -38,6 +38,12 @@ export function llmsTxt(): string {
     FILES.filter((f) => f.path.startsWith('/data/'))
       .map((f) => (f.path.includes('<') ? `- \`${SITE}${f.path}\`: ${f.what}` : `- [${f.name}](${SITE}${f.path}): ${f.what}`))
       .join('\n'),
+    '## Agent interfaces',
+    [
+      `- MCP server: \`${SITE}/mcp\`, Streamable HTTP, no sign-in; tools list_devices, get_device, compare_devices, check_layout and convert_units. Claude Code: \`claude mcp add --transport http screens-guide ${SITE}/mcp\``,
+      `- [Agent skill](${SITE}/skills/screens-guide/SKILL.md): the rules the measurements support and a review checklist, with the readings in [references/devices.md](${SITE}/skills/screens-guide/references/devices.md); the folder as a zip at ${SITE}/skills/screens-guide.zip`,
+      `- [Install steps for each agent](${md('/agents')})`,
+    ].join('\n'),
     '## Devices',
     DEVICES.map(deviceLine).join('\n'),
     '## Pages',

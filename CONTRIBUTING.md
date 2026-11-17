@@ -147,6 +147,14 @@ skills/                                # the plugin root: Markdown, JSON and the
   <name>/SKILL.md                      # the resident body
   <name>/references/*.md               # opened per task
   screens-guide/references/devices.md  # written by npm run gen:skill from data/devices.json; never edit it
+```
+
+The build serves each file of `skills/screens-guide/` under `/skills/screens-guide/`, and the folder
+as `/skills/screens-guide.zip` (`src/pages/skills/`, `src/lib/zip.ts`), for claude.ai and the Skills
+API. The zip holds the `screens-guide` folder at its root, dated the dataset's `updated`, and is the
+same byte for byte from the same files. `tests/skill.test.ts` reads both back from `dist/`.
+
+```
 evals/<case>/prompt.md                 # one eval case: the prompt, with its frontmatter
 evals/<case>/graders/<grader>.md       # one grader per file
 ```

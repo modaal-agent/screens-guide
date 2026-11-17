@@ -19,3 +19,6 @@
 
 /*.md
   Access-Control-Allow-Origin: *
+
+/skills/*
+  Access-Control-Allow-Origin: *

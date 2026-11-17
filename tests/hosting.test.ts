@@ -103,7 +103,7 @@ describe('the response headers', () => {
   })
 
   it('let any origin fetch the data files, the text files and the Markdown copies', () => {
-    for (const path of ['/data/*', '/llms.txt', '/llms-full.txt', '/*.md']) {
+    for (const path of ['/data/*', '/llms.txt', '/llms-full.txt', '/*.md', '/skills/*']) {
       expect(rules.get(path)?.get('access-control-allow-origin'), path).toBe('*')
     }
     expect(rules.get('/data/*')!.get('cache-control')).toBe('public, max-age=3600')

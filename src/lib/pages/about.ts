@@ -11,6 +11,41 @@ import { DATA_LICENSE, SITE } from '../site.ts'
 
 /** The MCP server's address. */
 export const MCP_URL = `${SITE}/mcp`
+const SKILL_BASE = '/skills/screens-guide'
+const SKILL_ZIP = '/skills/screens-guide.zip'
+const REPO = 'modaal-agent/screens-guide'
+
+/** /agents' install steps for each channel (spec 002 §4.2), from each agent's documentation. */
+const INSTALL_STEPS: Block[] = [
+  { type: 'h2', text: 'Install' },
+  {
+    type: 'p',
+    text: 'The Claude Code plugin installs the skill and the MCP server together. Elsewhere they install apart: the skill from the repository or the zip, the server from its URL.',
+  },
+  { type: 'h3', text: 'Claude Code' },
+  {
+    type: 'list',
+    items: [
+      `**The plugin**, the skill and the MCP server: \`/plugin marketplace add ${REPO}\`, then \`/plugin install screens-guide@screens-guide\`. On Claude Code 2.1.275 or later one line does both: \`/plugin install screens-guide --marketplace ${REPO}\`.`,
+      '**Update** with `claude plugin marketplace update screens-guide`, then `claude plugin update screens-guide@screens-guide`; `/reload-plugins` applies it to a running session. Claude Code installs an update only when the plugin\'s version changed.',
+      `**The MCP server alone**: \`claude mcp add --transport http screens-guide ${MCP_URL}\`.`,
+      '**The skill alone**: put the zip\'s `screens-guide` folder in `~/.claude/skills/` for every project, or in a project\'s `.claude/skills/`. Claude Code picks it up without a restart.',
+    ],
+  },
+  { type: 'h3', text: 'claude.ai' },
+  {
+    type: 'list',
+    items: [
+      `**The skill**: download [screens-guide.zip](${SKILL_ZIP}), open Customize, then Skills, click +, then Create skill, then Upload a skill, and choose the zip. Skills need code execution, which Settings turns on under Capabilities.`,
+      `**The MCP server**: Customize, then Connectors, Add, Add custom connector, with the URL \`${MCP_URL}\`. The server needs no authentication.`,
+    ],
+  },
+  { type: 'h3', text: 'The Claude API' },
+  {
+    type: 'p',
+    text: `Upload the skill's files to \`POST https://api.anthropic.com/v1/skills\`, each as a \`files[]\` field named \`screens-guide/<path>\`, then name the returned \`skill_id\` in a Messages request's \`container.skills\`, beside the code execution tool. The steps are in Anthropic's [skills guide](https://platform.claude.com/docs/en/build-with-claude/skills-guide).`,
+  },
+]
 
 /** The data files and text files the site serves, in the order /agents and llms.txt list them. */
 export const FILES: { path: string; name: string; what: string }[] = [
@@ -27,13 +62,13 @@ export function agentsDoc(): Doc {
   return {
     path: '/agents',
     title: 'screens.guide for coding agents',
-    description: 'The dataset as JSON, CSV and Markdown, its schema and license, and how to cite it.',
+    description: 'The MCP server, the agent skill and how to install them in each agent; the dataset as JSON, CSV and Markdown, its schema and license, and how to cite it.',
     h1: 'For coding agents',
     blocks: [
       {
         type: 'p',
         lede: true,
-        text: `The site's numbers are a dataset first: ${DEVICES.length} devices and ${readingCount()} readings, version ${DATA.version} of ${DATA.updated}. Connect an agent to the MCP server, fetch the files below, or fetch a Markdown copy of any page.`,
+        text: `The site's numbers are a dataset first: ${DEVICES.length} devices and ${readingCount()} readings, version ${DATA.version} of ${DATA.updated}. Connect an agent to the MCP server, install the agent skill, fetch the files below, or fetch a Markdown copy of any page.`,
       },
       { type: 'h2', text: 'MCP server' },
       {
@@ -53,6 +88,12 @@ export function agentsDoc(): Doc {
           'The server keeps no session and answers each request with one JSON response; it opens no event stream.',
         ],
       },
+      { type: 'h2', text: 'Agent skill' },
+      {
+        type: 'p',
+        text: `The \`screens-guide\` skill tells an agent where to read the numbers, which layout rules the measurements support, with their numbers, and how to review a screen against a device. It carries a snapshot of each device's current readings, [references/devices.md](${SKILL_BASE}/references/devices.md), for an agent without network access. Read it at [${SKILL_BASE}/SKILL.md](${SKILL_BASE}/SKILL.md), or download the folder as [screens-guide.zip](${SKILL_ZIP}).`,
+      },
+      ...INSTALL_STEPS,
       { type: 'h2', text: 'Files' },
       {
         type: 'table',
