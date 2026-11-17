@@ -1,0 +1,16 @@
+# Build products: Astro writes dist/ and .astro/, wrangler writes .wrangler/ (spec 001 §5.1)
+node_modules/
+dist/
+.astro/
+.wrangler/
+
+# Eval results: `claude plugin eval` writes a directory per run under evals/results/
+evals/results/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Per-user agent state; the shared .claude/settings.json and .claude/skills/ stay tracked
+.claude/settings.local.json
+CLAUDE.local.md
