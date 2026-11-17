@@ -220,8 +220,9 @@ messages, pull-request titles, bodies and review comments, and the site built fr
   the first 5,000 tokens of a loaded skill. The line budgets of S5 do not hold a token budget. Move
   material to `references/` before the body reaches it.
 - **Write no version literal into a skill.** A measured number in a skill's body names its device
-  and runtime; the full device table is `references/devices.md`, which the build generates from the
-  dataset (spec 002 §4.1).
+  and runtime, and `tests/skill.test.ts` recomputes it from the dataset: a new number in `SKILL.md`
+  gets a `claim` there. The full device table is `references/devices.md`, which `npm run gen:skill`
+  writes from the dataset and the test compares (spec 002 §4.1).
 - **A link that leaves a skill's directory is an absolute `https://` URL.** Every install channel
   but the plugin copies the skill's directory alone. S6 checks the relative links.
 - **The plugin root, `skills/`, holds Markdown, JSON and the plugin's PNG icon only.** Anthropic's

@@ -34,7 +34,7 @@ a private one is redacted there before the commit carrying it is pushed.
 | `npm run check` | `site` | astro check: a type error in a page, a component or `src/lib/` |
 | `npm run build` | `site` | a page that fails to render |
 | `npx wrangler dev` | none; run it after changing `wrangler.jsonc`, `public/_headers` or the build | `dist/` and `/mcp` as the Worker serves them: check that each URL answers with its `Content-Type`, an unknown path answers 404, and the headers of `public/_headers` arrive; `tests/hosting.test.ts` reads both files |
-| `npm test` | `site` | vitest: `tests/*.test.ts`, among them one seeded violation per data rule; `tests/site.test.ts` reads `dist/` and fails on a device missing from the home page table or without a page or JSON file, a page without its `.md` copy, a page missing from `llms.txt` or the sitemap, a link to a file the build did not write, and a word joined to the value after it (Astro drops the line break before a line that starts with `{` or an inline element; keep the word and the value on one line); `tests/mcp.test.ts` and `tests/negotiation.test.ts` drive the Worker's `fetch` with its bindings stubbed and the assets read from `dist/`; `tests/conformance.test.ts` starts `wrangler dev` on a free port, calls every tool through the MCP TypeScript SDK's client, and requests every page with `Accept: text/markdown` |
+| `npm test` | `site` | vitest: `tests/*.test.ts`, among them one seeded violation per data rule; `tests/site.test.ts` reads `dist/` and fails on a device missing from the home page table or without a page or JSON file, a page without its `.md` copy, a page missing from `llms.txt` or the sitemap, a link to a file the build did not write, and a word joined to the value after it (Astro drops the line break before a line that starts with `{` or an inline element; keep the word and the value on one line); `tests/skill.test.ts` fails when `references/devices.md` differs from `npm run gen:skill`'s output or a number in `SKILL.md` from the dataset; `tests/mcp.test.ts` and `tests/negotiation.test.ts` drive the Worker's `fetch` with its bindings stubbed and the assets read from `dist/`; `tests/conformance.test.ts` starts `wrangler dev` on a free port, calls every tool through the MCP TypeScript SDK's client, and requests every page with `Accept: text/markdown` |
 
 No network and no build: bash, find, grep, awk, perl and python3. `--self-test` builds a valid
 fixture tree in a temporary directory once per seeded violation, and fails if the check it targets
@@ -133,15 +133,17 @@ Cloudflare serves every other path from `dist/` without running it, unless no fi
 
 ## Skills, the plugin and the eval cases
 
-The skill and the plugin arrive with spec 002 phase 4. They follow this layout:
+The layout:
 
 ```
 .claude-plugin/marketplace.json        # the repository root is the marketplace; one entry, source ./skills
 skills/                                # the plugin root: Markdown, JSON and the icon only
   .claude-plugin/plugin.json           # name, version, "skills", icon and listing URLs
-  .claude-plugin/icon.png
+  .claude-plugin/icon.png              # rendered from assets/plugin-icon.svg, the command in its comment
+  .mcp.json                            # the MCP server, https://screens.guide/mcp, type http
   <name>/SKILL.md                      # the resident body
   <name>/references/*.md               # opened per task
+  screens-guide/references/devices.md  # written by npm run gen:skill from data/devices.json; never edit it
 evals/<case>/prompt.md                 # one eval case: the prompt, with its frontmatter
 evals/<case>/graders/<grader>.md       # one grader per file
 ```

@@ -18,6 +18,27 @@ files for agents beside them (phase 5).
 | [002-agent-interfaces](specs/002-agent-interfaces/spec.md) | the MCP server, Markdown by content negotiation, the skill and the Claude Code plugin |
 | [003-data-rounds](specs/003-data-rounds/spec.md) | the measurement rounds that add devices and fields after launch |
 
+## The skill and the plugin
+
+`skills/` is a Claude Code plugin, and the repository is its marketplace. The plugin carries one
+skill and connects the MCP server at https://screens.guide/mcp.
+
+| skill | what it does |
+| --- | --- |
+| [`screens-guide`](skills/screens-guide/) | lays out and reviews a mobile screen against the measured windows, safe areas, corner radii, system bars, size classes and folds, through the MCP tools, the data files or its own snapshot `references/devices.md` |
+
+Install it in Claude Code:
+
+```
+/plugin marketplace add modaal-agent/screens-guide
+/plugin install screens-guide@screens-guide
+```
+
+On Claude Code 2.1.275 or later, one line does both:
+`/plugin install screens-guide --marketplace modaal-agent/screens-guide`. Other agents install the
+skill alone with `npx skills add modaal-agent/screens-guide`. https://screens.guide/agents gives
+every channel's steps.
+
 ## Build and run
 
 The site needs Node 24 (`.node-version`). The repository checks need bash and python3:
@@ -31,6 +52,7 @@ npm run check:data                    # data/devices.json against its schema and
 npm run check                         # astro check: the pages' and the code's types
 npm run build                         # the static site, into dist/
 npm test                              # vitest; its site tests read dist/, so build first
+npm run gen:skill                     # skills/screens-guide/references/devices.md from data/devices.json
 npm run dev                           # the site at http://localhost:4321, rebuilt on each save
 npx wrangler dev                      # dist/ and the MCP server as the Worker serves them, at http://localhost:8787
 ```
@@ -61,7 +83,9 @@ the repository secret `CLOUDFLARE_API_TOKEN` and the repository variable `CLOUDF
 | `src/pages/`, `src/components/`, `src/layouts/`, `src/styles/` | the pages and the data and text files, built by Astro into `dist/`; every number on them comes from `data/devices.json` |
 | `astro.config.mjs`, `tsconfig.json` | the build: one `.html` file per page, no trailing slashes |
 | `worker/` | the Worker script: the MCP server at `/mcp` with its tools and rate limit, Markdown by content negotiation, and the usage events |
-| `scripts/check-data.ts`, `tests/` | `npm run check:data`, and the vitest files |
+| `skills/`, `.claude-plugin/marketplace.json` | the Claude Code plugin and its marketplace: the skill, the plugin manifest, the icon and `.mcp.json` |
+| `assets/plugin-icon.svg` | the source of the plugin's icon |
+| `scripts/check-data.ts`, `scripts/gen-skill.ts`, `tests/` | `npm run check:data`, `npm run gen:skill`, and the vitest files |
 | `scripts/check-agent-rules.sh` | the comparison of `AGENTS.md` with `CLAUDE.md` |
 | `scripts/check-skills.sh` | the checks on skills, plugin manifests and specs, with `--self-test` |
 | `.github/workflows/ci.yml` | the `rules`, `skills` and `site` jobs, on every pull request and push to `main` |

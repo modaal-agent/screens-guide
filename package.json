@@ -10,6 +10,7 @@
     "build": "astro build",
     "check": "astro check",
     "check:data": "node scripts/check-data.ts",
+    "gen:skill": "node scripts/gen-skill.ts",
     "test": "vitest run"
   },
   "devDependencies": {

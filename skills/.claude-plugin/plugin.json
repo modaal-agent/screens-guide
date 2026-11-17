@@ -1,0 +1,19 @@
+{
+  "name": "screens-guide",
+  "version": "1.0.0",
+  "description": "Lay out and review mobile screens against measured screen sizes, safe-area insets, corner radii, system bars, size classes and folds of iPhones, iPads and Android devices. Carries the screens-guide skill and connects the screens.guide MCP server.",
+  "author": {
+    "name": "Modaal.dev",
+    "url": "https://modaal.dev"
+  },
+  "homepage": "https://screens.guide",
+  "repository": "https://github.com/modaal-agent/screens-guide",
+  "license": "MIT",
+  "keywords": ["ios", "android", "safe-area", "screen-size", "layout", "swiftui", "jetpack-compose", "foldable", "mcp"],
+  "skills": "./screens-guide",
+  "icon": "./.claude-plugin/icon.png",
+  "documentationUrl": "https://screens.guide/agents",
+  "privacyPolicyUrl": "https://screens.guide/privacy",
+  "termsOfServiceUrl": "https://modaal.dev/terms",
+  "supportUrl": "https://github.com/modaal-agent/screens-guide/issues"
+}

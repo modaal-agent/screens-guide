@@ -1,0 +1,19 @@
+{
+  "name": "screens-guide",
+  "owner": {
+    "name": "modaal-agent",
+    "url": "https://github.com/modaal-agent"
+  },
+  "metadata": {
+    "description": "Measured screen sizes, safe areas, corner radii and system bars of iOS and Android devices, for coding agents.",
+    "version": "1"
+  },
+  "plugins": [
+    {
+      "name": "screens-guide",
+      "source": "./skills",
+      "description": "Lay out and review mobile screens against measured screen sizes, safe-area insets, corner radii, system bars, size classes and folds of iPhones, iPads and Android devices.",
+      "category": "development"
+    }
+  ]
+}
