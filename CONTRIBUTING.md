@@ -31,7 +31,9 @@ a private one is redacted there before the commit carrying it is pushed.
 | `scripts/check-skills.sh` | `skills` | each check in the table below |
 | `scripts/check-skills.sh --self-test` | `skills` | a check that stays green against a fixture seeded with its violation |
 | `npm run check:data` | `site` | `data/devices.json` against `data/schema.json`, and the rules of spec 001 §6: insets leave a safe area, corner radii at most half the shorter side, pixels equal to the window times the scale or density, unique ids and readings, a `current` build that has readings and is not a pre-release, a reason for every null field, a `data/CHANGELOG.md` entry for `version` |
-| `npm test` | `site` | vitest: `tests/*.test.ts`, among them one seeded violation per data rule |
+| `npm run check` | `site` | astro check: a type error in a page, a component or `src/lib/` |
+| `npm run build` | `site` | a page that fails to render |
+| `npm test` | `site` | vitest: `tests/*.test.ts`, among them one seeded violation per data rule; `tests/site.test.ts` reads `dist/` and fails on a device missing from the home page table or without a page, and on a word joined to the value after it (Astro drops the line break before a line that starts with `{` or an inline element; keep the word and the value on one line) |
 
 No network and no build: bash, find, grep, awk, perl and python3. `--self-test` builds a valid
 fixture tree in a temporary directory once per seeded violation, and fails if the check it targets

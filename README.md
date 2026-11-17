@@ -9,7 +9,8 @@ JSON Schema, `llms.txt`, Markdown copies, an MCP server and an agent skill, and 
 as tables, drawings and playgrounds. Modaal measures and publishes the data.
 
 [specs/](specs/) has three specs, and each one's "Phasing" section lists the commits that build
-the site. The dataset is in `data/` (spec 001 phase 3); the pages follow in phase 4.
+the site. The dataset is in `data/` (spec 001 phase 3) and the pages in `src/pages/` (phase 4); the
+files for agents follow in phase 5.
 
 | spec | what it plans |
 | --- | --- |
@@ -19,8 +20,7 @@ the site. The dataset is in `data/` (spec 001 phase 3); the pages follow in phas
 
 ## Build and run
 
-The site needs Node 24 (`.node-version`); spec 001 phase 4 adds the build. The repository checks
-need bash and python3:
+The site needs Node 24 (`.node-version`). The repository checks need bash and python3:
 
 ```bash
 bash scripts/check-agent-rules.sh     # AGENTS.md and CLAUDE.md are byte-identical
@@ -28,7 +28,10 @@ scripts/check-skills.sh               # skills, plugin manifests and spec refere
 scripts/check-skills.sh --self-test   # each check red against a seeded violation
 npm ci
 npm run check:data                    # data/devices.json against its schema and rules
-npm test                              # vitest
+npm run check                         # astro check: the pages' and the code's types
+npm run build                         # the static site, into dist/
+npm test                              # vitest; its site tests read dist/, so build first
+npm run dev                           # the site at http://localhost:4321, rebuilt on each save
 ```
 
 ## Layout
@@ -40,7 +43,9 @@ npm test                              # vitest
 | `specs/NNN-slug/spec.md` | the plan behind a change too big to carry in a commit message |
 | `data/devices.json` | the dataset, written by an export from the measurement runs, never by hand |
 | `data/schema.json`, `data/CHANGELOG.md` | its JSON Schema, and one entry per dataset version |
-| `src/lib/` | the code the checks and the site share: the dataset's types, the data checks |
+| `src/lib/` | the code the checks and the site share: the dataset's types, the data checks, the geometry, the table rows |
+| `src/pages/`, `src/components/`, `src/layouts/`, `src/styles/` | the pages, built by Astro into `dist/`; every number on them comes from `data/devices.json` |
+| `astro.config.mjs`, `tsconfig.json` | the build: one `.html` file per page, no trailing slashes |
 | `scripts/check-data.ts`, `tests/` | `npm run check:data`, and the vitest files |
 | `scripts/check-agent-rules.sh` | the comparison of `AGENTS.md` with `CLAUDE.md` |
 | `scripts/check-skills.sh` | the checks on skills, plugin manifests and specs, with `--self-test` |

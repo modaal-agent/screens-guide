@@ -1,0 +1,104 @@
+---
+import Base from '../layouts/Base.astro'
+import { DEVICES, headlineReading, num, runtimeLabel } from '../lib/data.ts'
+import { concentricRadius, cornerDepth } from '../lib/geometry.ts'
+
+// One pixel in each unit: every scale and density the dataset's displays have.
+const scales = new Map<string, { perUnit: number; unit: string; names: string[] }>()
+for (const d of DEVICES) {
+  const disp = Object.values(d.displays)[0]
+  const perUnit = d.platform === 'ios' ? disp.scale ?? 1 : (disp.density ?? 160) / 160
+  const key = `${d.unit} ${perUnit}`
+  const entry = scales.get(key) ?? { perUnit, unit: d.unit, names: [] }
+  entry.names.push(d.name)
+  scales.set(key, entry)
+}
+
+// The corner fit on each device with a rounded display: a square corner at the content margin
+// from the side, once resting on the safe area's bottom edge and once as far from the bottom as
+// from the side.
+const fits = DEVICES.flatMap((d) => {
+  const head = headlineReading(d)
+  const radius = head.cornerRadii.profile?.bottomLeft ?? 0
+  const marginReading = [...d.readings].reverse().find((r) => r.contentMargin !== null && r.screen === head.screen && r.rotation === head.rotation)
+  if (!radius || !marginReading || !head.safeAreaInsets) return []
+  const margin = marginReading.contentMargin as number
+  const bottom = head.safeAreaInsets.bottom
+  return [{
+    d, radius, margin, marginRuntime: marginReading.runtime, bottom,
+    onSafe: cornerDepth(radius, margin, bottom),
+    square: cornerDepth(radius, margin, margin),
+    concentric: concentricRadius(radius, margin, margin),
+  }]
+})
+---
+<Base title="Pixel snapping and corner fit" description="Where a thin line falls between pixels, and whether a frame's corner clears the display's rounded corner, worked out on the measured devices.">
+  <h1>Pixel snapping and corner fit</h1>
+  <p class="lede">
+    Two calculations a layout needs the measurements for: where a line falls on the pixel grid,
+    and how close a frame's corner may come to the display's rounded corner.
+  </p>
+
+  <h2>Pixel snapping</h2>
+  <p>
+    A line whose edges fall between pixels lights the pixels it partly covers in a blended colour,
+    and looks soft. Put thin lines and edges on multiples of one pixel: one pixel is 1 ÷ scale in
+    points, and 160 ÷ dpi in dp.
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col">Pixels per unit</th><th scope="col">One pixel</th><th scope="col">Devices</th></tr></thead>
+      <tbody>
+        {[...scales.values()].map((s) => (
+          <tr>
+            <td class="num">{num(s.perUnit)} px per {s.unit}</td>
+            <td class="num">{(1 / s.perUnit).toFixed(3)} {s.unit}</td>
+            <td>{s.names.join(', ')}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Corner fit</h2>
+  <p>
+    The display's rounded corner clips anything drawn under it. For a square corner at distances dx
+    and dy from the two edges that meet at a corner of radius R, the corner lies R − √((R − dx)² +
+    (R − dy)²) inside the curve; a negative value is how much the curve cuts off. A frame near a
+    corner keeps an even gap to the curve when its own radius is the concentric radius, R minus its
+    distance from the edges. Below, the frame stands at the system's content margin from the side,
+    on each device's bottom-left corner.
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Device</th>
+          <th scope="col">Corner radius</th>
+          <th scope="col">Content margin</th>
+          <th scope="col">Bottom inset</th>
+          <th scope="col">Corner on the safe area's bottom edge</th>
+          <th scope="col">Corner at the margin from both edges</th>
+          <th scope="col">Concentric radius</th>
+        </tr>
+      </thead>
+      <tbody>
+        {fits.map((f) => (
+          <tr>
+            <th scope="row"><a href={`/devices/${f.d.id}`}>{f.d.name}</a></th>
+            <td class="num">{num(f.radius)}</td>
+            <td class="num">{num(f.margin)} <span class="source">{runtimeLabel(f.marginRuntime)}</span></td>
+            <td class="num">{num(f.bottom)}</td>
+            <td class="num">{f.onSafe >= 0 ? `${num(f.onSafe)} inside` : `cut off by ${num(-f.onSafe)}`}</td>
+            <td class="num">{f.square >= 0 ? `${num(f.square)} inside` : `cut off by ${num(-f.square)}`}</td>
+            <td class="num">{num(f.concentric)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+  <p>
+    Lengths are in each device's unit. The radius is the display profile's; the margin is SwiftUI's <code>contentMargins(for: .container)</code>
+    as read on the runtime named.
+  </p>
+</Base>

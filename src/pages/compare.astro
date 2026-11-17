@@ -1,0 +1,45 @@
+---
+// The comparison: outlines of the chosen devices' current readings, to scale, from the top left.
+// The page's own HTML draws the default set; the interactive version reads ?ids= and redraws.
+import Base from '../layouts/Base.astro'
+import { COMPARE_DEFAULT, DEVICES, device, headlineReading, insets, size } from '../lib/data.ts'
+import { cornerTuple, roundedRectPath } from '../lib/drawing.ts'
+
+const shown = COMPARE_DEFAULT.map((id) => {
+  const d = device(id)
+  return { d, r: headlineReading(d) }
+})
+const width = Math.max(...shown.map((s) => s.r.window.width))
+const height = Math.max(...shown.map((s) => s.r.window.height))
+const pad = Math.max(width, height) * 0.02
+---
+<Base title="Compare screen sizes to scale" description="iPhones, iPads and Android devices drawn on top of each other to scale, in points and dp, with their safe areas.">
+  <h1>Compare devices to scale</h1>
+  <p class="lede">
+    The windows of each device's current reading, drawn on top of each other from the top left, one
+    point to one dp, with the safe area dashed.
+  </p>
+  <figure>
+    <svg class="device" viewBox={`${-pad} ${-pad} ${width + 2 * pad} ${height + 2 * pad}`} role="img" aria-label="Device outlines to scale">
+      {shown.map(({ r }, n) => {
+        const i = r.safeAreaInsets
+        return (
+          <g class={`compare-${n + 1}`}>
+            <path class="d-outline" d={roundedRectPath(0, 0, r.window.width, r.window.height, cornerTuple(r.cornerRadii.profile ?? r.cornerRadii.measured))} stroke-width="2" vector-effect="non-scaling-stroke" />
+            {i && <rect class="d-outline" x={i.left} y={i.top} width={r.window.width - i.left - i.right} height={r.window.height - i.top - i.bottom} stroke-dasharray="6 4" stroke-width="1" vector-effect="non-scaling-stroke" />}
+          </g>
+        )
+      })}
+    </svg>
+  </figure>
+  <ul class="legend">
+    {shown.map(({ d, r }, n) => (
+      <li><i class={`swatch-${n + 1}`}></i><a href={`/devices/${d.id}`}>{d.name}</a>: {size(r.window)} {d.unit}{r.safeAreaInsets ? `, insets ${insets(r.safeAreaInsets)}` : ''}</li>
+    ))}
+  </ul>
+  <h2>All devices</h2>
+  <p>Open a comparison of any two to eight devices with <code>/compare?ids=</code> and their ids:</p>
+  <ul class="cards">
+    {DEVICES.map((d) => <li><a href={`/devices/${d.id}`}>{d.name}</a> <code>{d.id}</code></li>)}
+  </ul>
+</Base>

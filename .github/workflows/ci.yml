@@ -39,9 +39,10 @@ jobs:
 
   # ── Site lane ────────────────────────────────────────────────────
   # The dataset and the site's code: npm ci from the lockfile, the data checks of
-  # spec 001 §6, then vitest. Node's version comes from .node-version.
+  # spec 001 §6, astro check, the build, then vitest, whose site tests read
+  # dist/. Node's version comes from .node-version.
   site:
-    name: Dataset checks and tests
+    name: Dataset checks, build and tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -56,6 +57,12 @@ jobs:
 
       - name: data/devices.json against its schema and rules
         run: npm run check:data
+
+      - name: Type check
+        run: npm run check
+
+      - name: Build
+        run: npm run build
 
       - name: Tests
         run: npm test

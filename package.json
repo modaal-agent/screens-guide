@@ -6,11 +6,20 @@
     "node": ">=24"
   },
   "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "check": "astro check",
     "check:data": "node scripts/check-data.ts",
     "test": "vitest run"
   },
   "devDependencies": {
+    "@astrojs/check": "0.9.12",
+    "@types/node": "24.19.2",
     "ajv": "8.20.0",
+    "typescript": "6.0.3",
     "vitest": "5.1.0"
+  },
+  "dependencies": {
+    "astro": "7.4.8"
   }
 }

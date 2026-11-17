@@ -1,0 +1,11 @@
+---
+import Base from '../layouts/Base.astro'
+import { DEVICES } from '../lib/data.ts'
+---
+<Base title="Page not found" description="This page does not exist on screens.guide.">
+  <h1>Page not found</h1>
+  <p>No page lives at this address. The devices:</p>
+  <ul class="cards">
+    {DEVICES.map((d) => <li><a href={`/devices/${d.id}`}>{d.name}</a></li>)}
+  </ul>
+</Base>

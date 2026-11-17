@@ -1,0 +1,51 @@
+---
+// One table per screen and rotation: a row per field, a column per runtime build, so a reader
+// sees where a value changes between OS versions.
+import type { Device } from '../lib/dataset.ts'
+import { compareRuntimes, runtimeLabel } from '../lib/data.ts'
+import { rowsFor } from '../lib/rows.ts'
+
+interface Props {
+  device: Device
+  screen: string
+  rotation: number
+}
+
+const { device, screen, rotation } = Astro.props
+const readings = device.readings
+  .filter((r) => r.screen === screen && r.rotation === rotation)
+  .sort((a, b) => compareRuntimes(a.runtime, b.runtime))
+const rows = rowsFor(device)
+---
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th scope="col">Field</th>
+        {readings.map((r) => (
+          <th scope="col" class={r.runtime.prerelease ? 'beta' : undefined}>
+            {runtimeLabel(r.runtime)}<br /><code>{r.runtime.build}</code>
+            {r.runtime.build === device.current.build && <> <span class="tag">current</span></>}
+          </th>
+        ))}
+      </tr>
+    </thead>
+    <tbody>
+      {rows.map((row) => (
+        <tr>
+          <th scope="row">{row.label}</th>
+          {readings.map((r) => {
+            const c = row.cell(r, device)
+            return (
+              <td class={['num', r.runtime.prerelease ? 'beta' : ''].filter(Boolean).join(' ')}>
+                {c.text ?? '—'}
+                {c.reason && <span class="reason"> {c.reason}</span>}
+                {c.source && <span class="source">{c.source}</span>}
+              </td>
+            )
+          })}
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
