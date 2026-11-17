@@ -30,6 +30,8 @@ a private one is redacted there before the commit carrying it is pushed.
 | `bash scripts/check-agent-rules.sh` | `rules` | `CLAUDE.md` differs from `AGENTS.md`; fix with `cp AGENTS.md CLAUDE.md` |
 | `scripts/check-skills.sh` | `skills` | each check in the table below |
 | `scripts/check-skills.sh --self-test` | `skills` | a check that stays green against a fixture seeded with its violation |
+| `npm run check:data` | `site` | `data/devices.json` against `data/schema.json`, and the rules of spec 001 §6: insets leave a safe area, corner radii at most half the shorter side, pixels equal to the window times the scale or density, unique ids and readings, a `current` build that has readings and is not a pre-release, a reason for every null field, a `data/CHANGELOG.md` entry for `version` |
+| `npm test` | `site` | vitest: `tests/*.test.ts`, among them one seeded violation per data rule |
 
 No network and no build: bash, find, grep, awk, perl and python3. `--self-test` builds a valid
 fixture tree in a temporary directory once per seeded violation, and fails if the check it targets

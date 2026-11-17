@@ -8,8 +8,8 @@ simulators and Android emulators. The site publishes them for coding agents firs
 JSON Schema, `llms.txt`, Markdown copies, an MCP server and an agent skill, and for people second,
 as tables, drawings and playgrounds. Modaal measures and publishes the data.
 
-The repository holds the plan today: [specs/](specs/) has three specs, and each one's "Phasing"
-section lists the commits that build it. Spec 001 phase 2, this file set, is the first.
+[specs/](specs/) has three specs, and each one's "Phasing" section lists the commits that build
+the site. The dataset is in `data/` (spec 001 phase 3); the pages follow in phase 4.
 
 | spec | what it plans |
 | --- | --- |
@@ -19,13 +19,16 @@ section lists the commits that build it. Spec 001 phase 2, this file set, is the
 
 ## Build and run
 
-Spec 001 phase 3 adds `package.json`, and phase 4 the build. The checks that run today need bash
-and python3:
+The site needs Node 24 (`.node-version`); spec 001 phase 4 adds the build. The repository checks
+need bash and python3:
 
 ```bash
 bash scripts/check-agent-rules.sh     # AGENTS.md and CLAUDE.md are byte-identical
 scripts/check-skills.sh               # skills, plugin manifests and spec references
 scripts/check-skills.sh --self-test   # each check red against a seeded violation
+npm ci
+npm run check:data                    # data/devices.json against its schema and rules
+npm test                              # vitest
 ```
 
 ## Layout
@@ -35,9 +38,13 @@ scripts/check-skills.sh --self-test   # each check red against a seeded violatio
 | `AGENTS.md` | the rules an agent working in this repository follows |
 | `CLAUDE.md` | a byte-identical copy of `AGENTS.md`, the file Claude Code reads |
 | `specs/NNN-slug/spec.md` | the plan behind a change too big to carry in a commit message |
+| `data/devices.json` | the dataset, written by an export from the measurement runs, never by hand |
+| `data/schema.json`, `data/CHANGELOG.md` | its JSON Schema, and one entry per dataset version |
+| `src/lib/` | the code the checks and the site share: the dataset's types, the data checks |
+| `scripts/check-data.ts`, `tests/` | `npm run check:data`, and the vitest files |
 | `scripts/check-agent-rules.sh` | the comparison of `AGENTS.md` with `CLAUDE.md` |
 | `scripts/check-skills.sh` | the checks on skills, plugin manifests and specs, with `--self-test` |
-| `.github/workflows/ci.yml` | the `rules` job and the `skills` job, on every pull request and push to `main` |
+| `.github/workflows/ci.yml` | the `rules`, `skills` and `site` jobs, on every pull request and push to `main` |
 | `LICENSE`, `LICENSE-DATA` | the two licenses, below |
 
 ## Contributing

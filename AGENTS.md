@@ -26,6 +26,8 @@ Run from the repository root:
 bash scripts/check-agent-rules.sh     # AGENTS.md and CLAUDE.md are byte-identical (ci.yml, `rules`)
 scripts/check-skills.sh               # skills, plugin manifests, spec references (ci.yml, `skills`)
 scripts/check-skills.sh --self-test   # each check red against a seeded violation (ci.yml, `skills`)
+npm ci && npm run check:data          # data/devices.json against data/schema.json and its rules (ci.yml, `site`)
+npm test                              # vitest (ci.yml, `site`)
 ```
 
 ## State a rule once

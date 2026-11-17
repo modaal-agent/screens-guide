@@ -1,0 +1,16 @@
+{
+  "name": "screens-guide",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "check:data": "node scripts/check-data.ts",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "ajv": "8.20.0",
+    "vitest": "5.1.0"
+  }
+}

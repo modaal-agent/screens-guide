@@ -36,3 +36,26 @@ jobs:
 
       - name: Each check red against a seeded violation
         run: scripts/check-skills.sh --self-test
+
+  # ── Site lane ────────────────────────────────────────────────────
+  # The dataset and the site's code: npm ci from the lockfile, the data checks of
+  # spec 001 §6, then vitest. Node's version comes from .node-version.
+  site:
+    name: Dataset checks and tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - run: npm ci
+
+      - name: data/devices.json against its schema and rules
+        run: npm run check:data
+
+      - name: Tests
+        run: npm test
