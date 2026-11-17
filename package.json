@@ -17,7 +17,8 @@
     "@types/node": "24.19.2",
     "ajv": "8.20.0",
     "typescript": "6.0.3",
-    "vitest": "5.1.0"
+    "vitest": "5.1.0",
+    "wrangler": "4.159.0"
   },
   "dependencies": {
     "@astrojs/preact": "6.1.2",

@@ -32,7 +32,15 @@ npm run check                         # astro check: the pages' and the code's t
 npm run build                         # the static site, into dist/
 npm test                              # vitest; its site tests read dist/, so build first
 npm run dev                           # the site at http://localhost:4321, rebuilt on each save
+npx wrangler dev                      # dist/ as the Worker serves it, with public/_headers, at http://localhost:8787
 ```
+
+## Deploy
+
+`.github/workflows/deploy.yml` runs the checks, builds the site and runs `npx wrangler deploy` on
+every push to `main`. The Worker `screens-guide` (`wrangler.jsonc`) serves `dist/` as static assets
+at https://screens.guide and runs no script. The workflow needs the repository secret
+`CLOUDFLARE_API_TOKEN` and the repository variable `CLOUDFLARE_ACCOUNT_ID`.
 
 ## Layout
 
@@ -53,6 +61,7 @@ npm run dev                           # the site at http://localhost:4321, rebui
 | `scripts/check-agent-rules.sh` | the comparison of `AGENTS.md` with `CLAUDE.md` |
 | `scripts/check-skills.sh` | the checks on skills, plugin manifests and specs, with `--self-test` |
 | `.github/workflows/ci.yml` | the `rules`, `skills` and `site` jobs, on every pull request and push to `main` |
+| `.github/workflows/deploy.yml`, `wrangler.jsonc`, `public/_headers` | the deploy on a push to `main`, the Worker, and the response headers |
 | `LICENSE`, `LICENSE-DATA` | the two licenses, below |
 
 ## Contributing

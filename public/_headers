@@ -1,0 +1,21 @@
+# Response headers for the static assets (spec 001 §4.4). The content security policy for
+# scripts, styles and connections is in each page's <meta> tag (astro.config.mjs); a <meta> tag
+# cannot carry frame-ancestors, so it is sent here.
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Content-Security-Policy: frame-ancestors 'none'; base-uri 'self'; object-src 'none'
+
+/data/*
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=3600
+
+/llms.txt
+  Access-Control-Allow-Origin: *
+
+/llms-full.txt
+  Access-Control-Allow-Origin: *
+
+/*.md
+  Access-Control-Allow-Origin: *

@@ -29,6 +29,7 @@ scripts/check-skills.sh --self-test   # each check red against a seeded violatio
 npm ci && npm run check:data          # data/devices.json against data/schema.json and its rules (ci.yml, `site`)
 npm run check && npm run build        # astro check, then the site into dist/ (ci.yml, `site`)
 npm test                              # vitest; the site tests read dist/ (ci.yml, `site`)
+npx wrangler dev                      # dist/ as the Worker serves it, with public/_headers (no CI job)
 ```
 
 ## State a rule once
