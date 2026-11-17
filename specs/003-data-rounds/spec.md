@@ -161,6 +161,7 @@ Commit subjects carry the prefix `[003-data-rounds]`.
 
 | phase | landed | departures from the plan |
 | --- | --- | --- |
+| 1 | `52aa47d`, with specs 001 and 002 | — |
 
 ---
 

@@ -19,8 +19,8 @@ section lists the commits that build it. Spec 001 phase 2, this file set, is the
 
 ## Build and run
 
-Spec 001 phase 4 adds `package.json` and the build. The checks that run today need bash and
-python3:
+Spec 001 phase 3 adds `package.json`, and phase 4 the build. The checks that run today need bash
+and python3:
 
 ```bash
 bash scripts/check-agent-rules.sh     # AGENTS.md and CLAUDE.md are byte-identical

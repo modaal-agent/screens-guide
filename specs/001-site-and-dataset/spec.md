@@ -30,8 +30,9 @@ Not implemented. **Baseline:** `main` at `77f08eb`, the repository files.
    comparison and playgrounds on top (§3).
 6. **Astro builds the site, and a Cloudflare Worker serves it**, deployed from GitHub Actions
    (§5, D9, D10).
-7. **Seven phases in this repository** (§7). Creating the GitHub repository, the Cloudflare secrets
-   and PostHog's cookieless setting are the user's steps in phase 7.
+7. **Seven phases in this repository** (§7). The user's steps: private vulnerability reporting
+   now, which `SECURITY.md` names; then, for phase 7, the Cloudflare secret and variable, the
+   zone's bot settings and PostHog's cookieless setting (§1.1).
 8. **PostHog counts page views and the use of the interactive parts, in its EU region, with no
    cookie** (§5.5, D15). Spec 002 adds events for the requests agents make.
 9. **The probes that read the devices stay private** (D8, §10.5). `/method` names the API or
@@ -45,8 +46,13 @@ Not implemented. **Baseline:** `main` at `77f08eb`, the repository files.
 
 ### 1.1 This repository
 
-Created 2026-11-17, with no remote. Its first commit on `main`, `77f08eb`, holds the repository
-files of §5.3: phase 2, landed ahead of this spec. This spec, spec 002 and spec 003 follow it.
+Created 2026-11-17. Its first commit on `main`, `77f08eb`, holds the repository files of §5.3:
+phase 2, landed ahead of this spec. This spec, spec 002 and spec 003 follow it in `52aa47d`.
+
+Pushed the same day to https://github.com/modaal-agent/screens-guide, public, with `main` as its
+default branch. CI run 44176997462 passed on `52aa47d` in 13 s. Read on 2026-11-17 with `gh`:
+private vulnerability reporting is off, though `SECURITY.md` sends reports there, and the
+repository has no Actions secrets or variables.
 
 ### 1.2 The recorded measurements
 
@@ -326,7 +332,7 @@ reads only `data/devices.json`.
 | `/agents` | the data files, the schema, the license, how to cite; spec 002 adds the MCP server and the skill |
 | `/method` | how each value is read, with which API or command, on which runtime; what no run measured |
 | `/changelog` | `data/CHANGELOG.md` |
-| `/privacy` | what PostHog receives from the pages and from the Worker, that it stores it in PostHog's EU region, that the site sets no cookie (§5.5), and the request count `/mcp` keeps per hashed client address for its rate limit (spec 002 §2.6) |
+| `/privacy` | what PostHog receives from the pages, that it stores it in PostHog's EU region, and that the site sets no cookie (§5.5); spec 002 adds the Worker's events and the rate limit's count per hashed client address, each with the code that sends or keeps it |
 | any other path | the 404 page |
 
 ### 3.2 What each page shows
@@ -358,6 +364,10 @@ Preact components, rendered on the server and hydrated in the browser (D9):
 - **The playgrounds**: pixel snapping and corner fit from the docs page, and "this device", which
   reads the visitor's CSS `env(safe-area-inset-*)`, `devicePixelRatio` and screen size, and names
   the measured device closest to them.
+- **`src/lib/geometry.ts`**: the arithmetic the playgrounds use, pixel snapping and the fit of a
+  frame's corner against the display's (the depth inside or outside the curve, and the concentric
+  radius). Spec 002's `check_layout` imports the same file and adds its other findings to it
+  (spec 002 §2.4).
 
 ---
 
@@ -428,6 +438,9 @@ variable `CLOUDFLARE_ACCOUNT_ID`.
   and spec references, with its `--self-test`.
 - `.github/workflows/ci.yml`, with two jobs on every pull request and push to `main`: `rules` runs
   `scripts/check-agent-rules.sh`, and `skills` runs `scripts/check-skills.sh` and its self-test.
+- `SECURITY.md` sends reports to GitHub's private vulnerability reporting. The user turns it on in
+  the repository's settings (**Settings → Advanced Security → Private vulnerability reporting**);
+  it was off on 2026-11-17 (§1.1).
 - `AGENTS.md` adds this repository's rules:
   - The repository is public. A commit, comment, page or generated file names no private
     repository, internal path or internal project.
@@ -474,7 +487,9 @@ zone's bot settings, any setting that blocks AI crawlers or replaces `robots.txt
   `eu-assets.i.posthog.com` (§1.7).
 - Spec 002 §2.5 sends events for the requests the Worker serves: MCP messages, pages, and the
   files agents fetch.
-- `/privacy` (§3.1) lists the events of this section and of spec 002 §2.5.
+- `/privacy` (§3.1) lists the events of this section. Spec 002's phases add the Worker's events
+  (spec 002 §2.5) and the rate limit's count (spec 002 §2.6) to it, each in the pull request that
+  adds the code, as `AGENTS.md` §"The dataset and the pages" requires.
 - The user's step in phase 7: turn on cookieless mode in the PostHog project's settings. Without
   it PostHog drops the pages' events (§1.6).
 
@@ -492,7 +507,10 @@ Each phase runs the checks that exist by then; CI runs them on every pull reques
   reading set.
 - `npm test` (vitest): the CSV round-trips to the JSON's values; `llms.txt` lists every page; every
   page has its `.md` copy and every device its JSON file; the device table on `/` has one row per
-  device; analytics starts on the host `screens.guide` and on no other host.
+  device; analytics starts on the host `screens.guide` and on no other host; `src/lib/geometry.ts`
+  gives the corner cases of spec 002 §2.3 on the iPhone 17, radius 62 pt: a square corner 16 pt
+  from the side and 34 pt from the bottom lies 8.15 pt inside the curve, at 16 pt from both edges
+  it is cut off by 3.05 pt, and the concentric radius for a 16 pt margin is 46 pt.
 - `bash scripts/check-agent-rules.sh`.
 - With `npx wrangler dev`: each URL of §3.1 and §4 answers 200 with the expected `Content-Type`; an
   unknown path answers 404; the headers of §4.4 arrive.
@@ -511,11 +529,11 @@ Each phase runs the checks that exist by then; CI runs them on every pull reques
 | --- | --- | --- |
 | 1 | `specs/001-site-and-dataset/spec.md` | the spec opens the series; specs 002 and 003 land in the same commit, because the three cite each other's sections |
 | 2 | the repository files of §5.3, the two license files among them | every later phase follows `AGENTS.md` |
-| 3 | `data/devices.json`, `data/schema.json`, `data/CHANGELOG.md`, `npm run check:data` and its CI job; the exporter's commit in the private repository beside it | the pages read the dataset |
-| 4 | `package.json` and its lockfile, `.node-version`, `astro.config.mjs`, the layout and stylesheet, and the pages of §3.1 with their tables and drawings, no islands | the pages are what phases 5 and 6 extend |
+| 3 | `package.json` and its lockfile, `.node-version`, `data/devices.json`, `data/schema.json`, `data/CHANGELOG.md`, `npm run check:data` and its CI job; the exporter's commit in the private repository beside it | the pages read the dataset; `npm run check:data` is the first npm script, so `package.json` arrives with it |
+| 4 | `astro.config.mjs`, the layout and stylesheet, and the pages of §3.1 with their tables and drawings, no islands | the pages are what phases 5 and 6 extend |
 | 5 | the files of §4 and their tests | written from the same data the pages use |
-| 6 | the interactive parts of §3.4, `src/lib/analytics.ts` and the events of §5.5, `/privacy`, and the content security policy they need | the HTML they hydrate exists from phase 4; the events come from the interactive parts |
-| 7 | `wrangler.jsonc` with the custom domain, `public/_headers`, `deploy.yml`; then the user's steps: the GitHub repository `modaal-agent/screens-guide`, the secret and variable, the zone's bot settings, PostHog's cookieless setting; the first deploy and the live checks | the site goes live once it is complete |
+| 6 | the interactive parts of §3.4 with `src/lib/geometry.ts` and its tests, `src/lib/analytics.ts` and the events of §5.5, `/privacy` with those events, and the content security policy they need | the HTML they hydrate exists from phase 4; the events come from the interactive parts |
+| 7 | `wrangler.jsonc` with the custom domain, `public/_headers`, `deploy.yml`; then the user's steps: the secret and variable, the zone's bot settings, PostHog's cookieless setting; the first deploy and the live checks | the site goes live once it is complete; the GitHub repository exists since 2026-11-17 (§1.1) |
 
 Commit subjects carry the prefix `[001-site-and-dataset]`.
 
@@ -523,7 +541,8 @@ Commit subjects carry the prefix `[001-site-and-dataset]`.
 
 | phase | landed | departures from the plan |
 | --- | --- | --- |
-| 2 | `77f08eb`, the repository's first commit | landed before phase 1, the spec; `scripts/check-skills.sh` and the `skills` job added beside the agent rules check |
+| 1 | `52aa47d`, with specs 002 and 003 | — |
+| 2 | `77f08eb`, the repository's first commit | landed before phase 1, the spec; `scripts/check-skills.sh` and the `skills` job added beside the agent rules check; turning on private vulnerability reporting, which `SECURITY.md` names, added to the user's steps (§5.3) |
 
 ---
 

@@ -265,8 +265,11 @@ both edges it is cut off by 3.05 pt. Both are test cases (§5).
 
 ### 2.4 Shared code
 
-`src/lib/geometry.ts` holds the arithmetic of §2.3. `check_layout` and the site's playground
-(spec 001 §3.4) both import it, and one test file covers it.
+`src/lib/geometry.ts` holds the arithmetic of §2.3. Spec 001's phase 6 writes it with the corner
+fit and pixel snapping its playgrounds use (spec 001 §3.4); phase 2 here adds the findings only
+`check_layout` reports: `outside-window`, `in-inset`, `under-system-bar`, `crosses-fold` and
+`in-occlusion-region`. `check_layout` and the playgrounds import the one file, and one test file
+covers it.
 
 ### 2.5 Usage events
 
@@ -281,6 +284,8 @@ spec 001 §5.5, with the token and host from `src/lib/analytics.ts`:
 
 - Every event also carries the request's `User-Agent` and `Accept` headers, which tell an agent's
   HTTP client from a browser.
+- `/privacy` (spec 001 §3.1) lists each event, and the rate limit's count (§2.6), in the pull
+  request that adds it.
 - Each event has a new random UUID as `distinct_id` and `"$process_person_profile": false`, so
   PostHog stores it as an anonymous event (§1.5). A stateless server cannot tell two requests from
   one client apart (D2).
@@ -475,8 +480,8 @@ first `mcp-v` tag publishes `server.json`, and the registry's API returns it.
 | phase | what lands | why here |
 | --- | --- | --- |
 | 1 | `specs/002-agent-interfaces/spec.md` | the spec opens the series |
-| 2 | `worker/index.ts`, `worker/mcp.ts` and `worker/analytics.ts` with the `mcp_request` event, the rate limit of §2.6, `src/lib/geometry.ts`, the tests of §5, `main`, `run_worker_first`, `ratelimits`, `durable_objects` and `migrations` in `wrangler.jsonc`, the MCP section of `/agents` | needs spec 001's dataset (its phase 3) and pages (its phase 4) |
-| 3 | Markdown negotiation in `worker/index.ts`, the `page_served` and `file_served` events with their `run_worker_first` entries, and their tests | uses phase 2's Worker script |
+| 2 | `worker/index.ts`, `worker/mcp.ts` and `worker/analytics.ts` with the `mcp_request` event, the rate limit of §2.6, the findings of §2.4 added to `src/lib/geometry.ts`, the `mcp_request` event and the rate limit's count on `/privacy`, the tests of §5, `main`, `run_worker_first`, `ratelimits`, `durable_objects` and `migrations` in `wrangler.jsonc`, the MCP section of `/agents` | needs spec 001's dataset (its phase 3) and pages (its phase 4) |
+| 3 | Markdown negotiation in `worker/index.ts`, the `page_served` and `file_served` events with their `run_worker_first` entries and their lines on `/privacy`, and their tests | uses phase 2's Worker script |
 | 4 | the skill, `references/devices.md` and its generator, the two plugin manifests, the icon and `.mcp.json`, the eval cases and a first round, S17 to S20, the zip, the install steps on `/agents` | the skill names phase 2's tools |
 | 5 | deploy, the live checks of §5, Workers logs on, `server.json` and `mcp-registry.yml` with the first publish; then the user's steps: the `mcp-registry` environment and its reviewer, the directory submissions of §4.4, and the plugin directory submission | needs spec 001's deploy phase |
 
@@ -486,6 +491,7 @@ Commit subjects carry the prefix `[002-agent-interfaces]`.
 
 | phase | landed | departures from the plan |
 | --- | --- | --- |
+| 1 | `52aa47d`, with specs 001 and 003 | — |
 
 ---
 
