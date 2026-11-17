@@ -45,6 +45,21 @@ const INSTALL_STEPS: Block[] = [
     type: 'p',
     text: `Upload the skill's files to \`POST https://api.anthropic.com/v1/skills\`, each as a \`files[]\` field named \`screens-guide/<path>\`, then name the returned \`skill_id\` in a Messages request's \`container.skills\`, beside the code execution tool. The steps are in Anthropic's [skills guide](https://platform.claude.com/docs/en/build-with-claude/skills-guide).`,
   },
+  { type: 'h3', text: 'Other agents' },
+  {
+    type: 'p',
+    text: 'Codex, Cursor, GitHub Copilot and Gemini CLI read the same skill format. Each step below follows the agent\'s documentation as read on 2026-11-18.',
+  },
+  {
+    type: 'list',
+    items: [
+      `**Any of them, with the cross-agent \`skills\` CLI**: \`npx skills add ${REPO} --skill screens-guide\` installs the skill into each agent it finds on the machine; \`-a <agent>\` names one, and \`-g\` installs it for the user instead of the project. \`npx skills add ${SITE}${SKILL_ZIP}\` installs it from the zip. ([docs](https://github.com/vercel-labs/skills))`,
+      `**Codex**: skills load from \`.agents/skills/\` in the project and \`~/.agents/skills/\`. The server: \`codex mcp add screens-guide --url ${MCP_URL}\`. ([skills](https://learn.chatgpt.com/docs/build-skills), [MCP](https://learn.chatgpt.com/docs/extend/mcp?surface=cli))`,
+      `**Cursor**: skills load from \`.agents/skills/\` or \`.cursor/skills/\` in the project, and \`~/.cursor/skills/\`. The server: \`{"mcpServers": {"screens-guide": {"url": "${MCP_URL}"}}}\` in \`.cursor/mcp.json\` or \`~/.cursor/mcp.json\`. ([skills](https://cursor.com/docs/context/skills), [MCP](https://cursor.com/docs/context/mcp))`,
+      `**GitHub Copilot**: \`gh skill install ${REPO} screens-guide\`, with GitHub CLI 2.90.0 or later; skills load from \`.github/skills/\` or \`.agents/skills/\` in the project, and \`~/.copilot/skills/\`. The server in Copilot CLI: \`copilot mcp add --transport http screens-guide ${MCP_URL}\`. ([skills](https://docs.github.com/en/copilot/concepts/agents/about-agent-skills), [MCP](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-mcp-servers))`,
+      `**Gemini CLI**: \`gemini skills install https://github.com/${REPO}.git --path skills/screens-guide\`. The server: \`gemini mcp add --transport http screens-guide ${MCP_URL}\`. ([skills](https://geminicli.com/docs/cli/skills/), [MCP](https://github.com/google-gemini/gemini-cli/blob/main/docs/tools/mcp-server.md))`,
+    ],
+  },
 ]
 
 /** The data files and text files the site serves, in the order /agents and llms.txt list them. */
