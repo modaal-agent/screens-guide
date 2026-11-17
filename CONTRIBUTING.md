@@ -19,7 +19,7 @@ a private one is redacted there before the commit carrying it is pushed.
   named after the spec's directory, such as `001-site-and-dataset`.
 - Write the spec first, in `specs/NNN-slug/spec.md`, when the change is too big to describe in a
   commit message.
-- Before the pull request, run the three commands of §"Checks" and fix what they report.
+- Before the pull request, run the commands of §"Checks" and fix what they report.
 - A wrong measurement is fixed at its source and exported again; open an issue naming the device,
   the runtime and the field. A pull request that edits `data/devices.json` by hand is closed.
 
@@ -33,7 +33,7 @@ a private one is redacted there before the commit carrying it is pushed.
 | `npm run check:data` | `site` | `data/devices.json` against `data/schema.json`, and the rules of spec 001 §6: insets leave a safe area, corner radii at most half the shorter side, pixels equal to the window times the scale or density, unique ids and readings, a `current` build that has readings and is not a pre-release, a reason for every null field, a `data/CHANGELOG.md` entry for `version` |
 | `npm run check` | `site` | astro check: a type error in a page, a component or `src/lib/` |
 | `npm run build` | `site` | a page that fails to render |
-| `npm test` | `site` | vitest: `tests/*.test.ts`, among them one seeded violation per data rule; `tests/site.test.ts` reads `dist/` and fails on a device missing from the home page table or without a page, and on a word joined to the value after it (Astro drops the line break before a line that starts with `{` or an inline element; keep the word and the value on one line) |
+| `npm test` | `site` | vitest: `tests/*.test.ts`, among them one seeded violation per data rule; `tests/site.test.ts` reads `dist/` and fails on a device missing from the home page table or without a page or JSON file, a page without its `.md` copy, a page missing from `llms.txt` or the sitemap, a link to a file the build did not write, and a word joined to the value after it (Astro drops the line break before a line that starts with `{` or an inline element; keep the word and the value on one line) |
 
 No network and no build: bash, find, grep, awk, perl and python3. `--self-test` builds a valid
 fixture tree in a temporary directory once per seeded violation, and fails if the check it targets
@@ -59,6 +59,22 @@ The check ids follow `scripts/check-skills.sh` in
 [modaal-agent/skills](https://github.com/modaal-agent/skills), which this script is adapted from.
 The budgets and the key list are `STANDARD_KEYS`, `SKILL_BODY_MAX`, `REFERENCE_MAX` and
 `DESCRIPTION_MAX` in `scripts/check-skills.sh`. Change a number there, not in a document.
+
+## Pages and their Markdown copies
+
+Each page's content is a `Doc` in `src/lib/pages/`: its title, description, heading and blocks
+(`src/lib/doc.ts`). Paragraphs and table cells are inline Markdown limited to `` `code` ``,
+`[label](/path)` and `**strong**`. `src/components/DocBlocks.astro` renders the blocks as HTML, and
+`markdownCopy()` writes them as the page's `.md` copy, with site-relative links made absolute.
+
+- To change a page's text, edit its module in `src/lib/pages/`, not the `.astro` file.
+- To add a drawing or another part with no Markdown form, add a `slot` block and fill the slot of
+  that name in the `.astro` page. Give the block a `markdown` alternative when it shows values.
+- To add a page, write its module, its `.astro` file, and add it to `sitePages()` in
+  `src/lib/pages/index.ts`; `[page].md.ts`, the sitemap and `llms.txt` read that list, and
+  `tests/site.test.ts` fails until the page, its copy and its entries exist.
+- Write each sentence of an `.astro` file's own text on one line with the values in it: Astro drops
+  the line break before a line that starts with `{` or an inline element.
 
 ## Skills, the plugin and the eval cases
 

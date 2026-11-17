@@ -1,19 +1,5 @@
 ---
-import Base from '../layouts/Base.astro'
-import { REPOSITORY } from '../lib/data.ts'
+import DocPage from '../components/DocPage.astro'
+import { privacyDoc } from '../lib/pages/about.ts'
 ---
-<Base title="Privacy" description="What screens.guide collects: no cookies, and the requests Cloudflare logs.">
-  <h1>Privacy</h1>
-  <div class="prose">
-    <p>
-      screens.guide sets no cookie and writes nothing to your browser's local or session storage. Its
-      pages load scripts and styles from screens.guide only.
-    </p>
-    <p>
-      Cloudflare serves the site and keeps its own logs of the requests it serves, under <a href="https://www.cloudflare.com/privacypolicy/">Cloudflare's privacy policy</a>.
-    </p>
-    <p>
-      The site's code is public: <a href={REPOSITORY}>{REPOSITORY}</a>.
-    </p>
-  </div>
-</Base>
+<DocPage doc={privacyDoc()} />

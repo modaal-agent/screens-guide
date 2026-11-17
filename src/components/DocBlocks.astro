@@ -1,0 +1,61 @@
+---
+// A page's blocks as HTML. A `slot` block takes the HTML DocPage rendered for its name.
+import type { Block, Cell, Table } from '../lib/doc.ts'
+import { inlineHtml } from '../lib/doc.ts'
+
+interface Props {
+  blocks: Block[]
+  slots?: Record<string, string>
+}
+
+const { blocks, slots = {} } = Astro.props
+
+function cellHtml(c: Cell): string {
+  if (typeof c === 'string') return inlineHtml(c)
+  return [
+    inlineHtml(c.text),
+    ...(c.lines ?? []).map((l) => `<div>${inlineHtml(l)}</div>`),
+    c.reason ? `<span class="reason"> ${inlineHtml(c.reason)}</span>` : '',
+    c.note ? `<span class="source">${inlineHtml(c.note)}</span>` : '',
+  ].join('')
+}
+
+function cls(t: Table, column: number, beta = false): string | undefined {
+  const names = [t.numeric?.includes(column) ? 'num' : '', beta || t.beta?.includes(column) ? 'beta' : '']
+  return names.filter(Boolean).join(' ') || undefined
+}
+---
+{blocks.map((b) => {
+  switch (b.type) {
+    case 'h2': return <h2 id={b.id} set:html={inlineHtml(b.text)} />
+    case 'h3': return <h3 id={b.id} set:html={inlineHtml(b.text)} />
+    case 'p': return <p class={b.lede ? 'lede' : undefined} set:html={inlineHtml(b.text)} />
+    case 'list': return <ul class="prose">{b.items.map((i) => <li set:html={inlineHtml(i)} />)}</ul>
+    case 'cards': return <ul class="cards">{b.items.map((i) => <li set:html={inlineHtml(i)} />)}</ul>
+    case 'facts': return (
+      <dl class="facts">{b.items.map(([k, v]) => <><dt set:html={inlineHtml(k)} /><dd set:html={inlineHtml(v)} /></>)}</dl>
+    )
+    case 'toc': return (
+      <nav aria-label="On this page" class="toc">
+        <ul>{b.links.map(([label, href]) => <li><a href={href} set:html={inlineHtml(label)} /></li>)}</ul>
+      </nav>
+    )
+    case 'table': return (
+      <div class="table-wrap">
+        <table id={b.id}>
+          <thead><tr>{b.head.map((c, i) => <th scope="col" class={cls(b, i)} set:html={cellHtml(c)} />)}</tr></thead>
+          <tbody>
+            {b.rows.map((r) => (
+              <tr class={r.beta ? 'beta' : undefined}>
+                {r.cells.map((c, i) => i === 0
+                  ? <th scope="row" class={cls(b, i)} set:html={cellHtml(c)} />
+                  : <td class={cls(b, i)} set:html={cellHtml(c)} />)}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )
+    case 'slot': return <Fragment set:html={slots[b.name] ?? ''} />
+  }
+})}

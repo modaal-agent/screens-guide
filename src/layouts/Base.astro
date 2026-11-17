@@ -5,9 +5,11 @@ import { DATA, REPOSITORY, SITE } from '../lib/data.ts'
 interface Props {
   title: string
   description: string
+  /** A schema.org object written into the head as JSON-LD. */
+  jsonLd?: object
 }
 
-const { title, description } = Astro.props
+const { title, description, jsonLd } = Astro.props
 const path = Astro.url.pathname.replace(/\.html$/, '').replace(/\/index$/, '/') || '/'
 const canonical = new URL(path, SITE).href
 const nav = [
@@ -33,6 +35,7 @@ const fullTitle = path === '/' ? title : `${title} · screens.guide`
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
     <meta property="og:type" content="website" />
+    {jsonLd && <script type="application/ld+json" is:inline set:html={JSON.stringify(jsonLd).replace(/</g, '\\u003c')} />}
     <slot name="head" />
   </head>
   <body>

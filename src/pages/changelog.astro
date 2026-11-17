@@ -1,9 +1,6 @@
 ---
-import Base from '../layouts/Base.astro'
-import { Content } from '../../data/CHANGELOG.md'
+import DocPage from '../components/DocPage.astro'
+import { changelogDoc } from '../lib/pages/about.ts'
+import { CHANGELOG } from '../lib/pages/index.ts'
 ---
-<Base title="Dataset changelog" description="Each version of the dataset: the devices and runtimes it added and the values it corrected.">
-  <div class="prose">
-    <Content />
-  </div>
-</Base>
+<DocPage doc={changelogDoc(CHANGELOG)} />

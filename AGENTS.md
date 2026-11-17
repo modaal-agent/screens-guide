@@ -193,6 +193,11 @@ messages, pull-request titles, bodies and review comments, and the site built fr
   (spec 001 D5).
 - **Pages, data copies, Markdown copies and `llms.txt` are generated from `data/devices.json`.** A
   page holds no number of its own.
+- **A page's text is written once, as blocks in `src/lib/pages/`.** The `.astro` page renders them
+  with `DocPage`, and the page's `.md` copy is written from the same blocks. Markup with no
+  Markdown form, such as a drawing, is a `slot` block, with a `markdown` alternative when it shows
+  values. A new page goes into `sitePages()` in `src/lib/pages/index.ts`, which the sitemap,
+  `llms.txt` and the `.md` copies read.
 - **Send no usage event the specs do not list** (spec 001 §5.5, spec 002 §2.5). A new event, or a
   new property on one, changes the spec, the code and `/privacy` in the same pull request.
 

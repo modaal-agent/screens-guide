@@ -1,12 +1,10 @@
 ---
-import Base from '../../layouts/Base.astro'
 import DeviceDrawing from '../../components/DeviceDrawing.astro'
+import DocPage from '../../components/DocPage.astro'
 import Legend from '../../components/Legend.astro'
-import ReadingTable from '../../components/ReadingTable.astro'
 import type { Device } from '../../lib/dataset.ts'
-import {
-  DEVICES, SCREEN_LABEL, currentReadings, groups, insets, rotationLabel, runtimeLabel, runtimes, scaleLabel, size, unitName,
-} from '../../lib/data.ts'
+import { DEVICES, SCREEN_LABEL, rotationLabel, size } from '../../lib/data.ts'
+import { deviceDoc, figureReadings } from '../../lib/pages/device.ts'
 
 export function getStaticPaths() {
   return DEVICES.map((device) => ({ params: { id: device.id }, props: { device } }))
@@ -17,58 +15,18 @@ interface Props {
 }
 
 const { device: d } = Astro.props
-const current = currentReadings(d)
-const head = current.find((r) => r.rotation === 0) ?? current[0]
-// The drawings: per screen, the current build's natural orientation and its first rotation the
-// other way round.
-const figures = (d.screens ? d.screens.map((s) => s.id) : ['main']).flatMap((screen) => {
-  const own = current.filter((r) => r.screen === screen).sort((a, b) => a.rotation - b.rotation)
-  const first = own[0]
-  const turned = own.find((r) => first && r.orientation !== first.orientation)
-  return [first, turned].filter((r) => r !== undefined)
-})
-const builds = runtimes(d)
-const description = `${d.name}: ${size(head.window)} ${d.unit}, ${size(head.pixels)} px${head.safeAreaInsets ? `, safe-area insets ${insets(head.safeAreaInsets)}` : ''}; ${d.readings.length} readings on ${builds.length} runtime builds, measured.`
 ---
-<Base title={`${d.name} screen size, safe area and corner radius`} description={description}>
-  <h1>{d.name}</h1>
-  <dl class="facts">
-    <dt>Platform</dt><dd>{d.platform === 'ios' ? 'iOS' : 'Android'}, {d.kind}</dd>
-    <dt>Unit</dt><dd>{unitName(d)}; scale {scaleLabel(d)}</dd>
-    {Object.entries(d.displays).map(([id, disp]) => (
-      <>
-        <dt>{id === 'main' ? 'Display' : `Display, ${id}`}</dt>
-        <dd>{size(disp)} {d.unit} in its natural orientation, {size(disp.pixels)} px{disp.cutout ? `, cutout: ${disp.cutout}` : ''}</dd>
-      </>
-    ))}
-    <dt>Current</dt><dd>{runtimeLabel(current[0].runtime)} (<code>{d.current.build}</code>)</dd>
-    <dt>Runtimes read</dt><dd>{builds.map((rt) => `${runtimeLabel(rt)} (${rt.build})`).join(', ')}</dd>
-  </dl>
-
-  <h2>The current reading</h2>
-  <div class="figures">
-    {figures.map((r) => (
-      <figure>
-        <DeviceDrawing device={d} reading={r} />
-        <figcaption>{SCREEN_LABEL[r.screen]}, {rotationLabel(r)}: {size(r.window)} {d.unit}</figcaption>
-      </figure>
-    ))}
-  </div>
-  <Legend />
-
-  <h2>Readings by screen and orientation</h2>
-  <p>
-    One column per runtime build, oldest first; a beta build's column is shaded. Positions are in
-    window coordinates, from the window's top left, in {d.unit}. A rotation of 90° puts the
-    device's top edge on the window's left.
-  </p>
-  {groups(d).map((g) => (
-    <section>
-      <h3>{SCREEN_LABEL[g.screen]}, {rotationLabel(g)}</h3>
-      <ReadingTable device={d} screen={g.screen} rotation={g.rotation} />
-    </section>
-  ))}
-  <p>
-    The same data: <a href={`/data/v1/devices/${d.id}.json`}>{d.id}.json</a>, <a href={`/devices/${d.id}.md`}>this page in Markdown</a>.
-  </p>
-</Base>
+<DocPage doc={deviceDoc(d)}>
+  <Fragment slot="drawings">
+    <h2>The current reading</h2>
+    <div class="figures">
+      {figureReadings(d).map((r) => (
+        <figure>
+          <DeviceDrawing device={d} reading={r} />
+          <figcaption>{SCREEN_LABEL[r.screen]}, {rotationLabel(r)}: {size(r.window)} {d.unit}</figcaption>
+        </figure>
+      ))}
+    </div>
+    <Legend />
+  </Fragment>
+</DocPage>

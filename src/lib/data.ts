@@ -5,8 +5,7 @@ import { displayOf, type Corners, type Dataset, type Device, type Insets, type R
 
 export const DATA = raw as unknown as Dataset
 export const DEVICES: Device[] = DATA.devices
-export const SITE = 'https://screens.guide'
-export const REPOSITORY = 'https://github.com/modaal-agent/screens-guide'
+export { REPOSITORY, SITE } from './site.ts'
 /** The devices /compare draws when the URL names none. */
 export const COMPARE_DEFAULT = ['iphone-se-3', 'iphone-17', 'iphone-17-pro-max', 'pixel-8']
 
