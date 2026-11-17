@@ -90,6 +90,7 @@ the repository secret `CLOUDFLARE_API_TOKEN` and the repository variable `CLOUDF
 | `scripts/check-skills.sh` | the checks on skills, plugin manifests and specs, with `--self-test` |
 | `.github/workflows/ci.yml` | the `rules`, `skills` and `site` jobs, on every pull request and push to `main` |
 | `.github/workflows/deploy.yml`, `wrangler.jsonc`, `public/_headers` | the deploy on a push to `main`, the Worker, and the response headers |
+| `server.json`, `.github/workflows/mcp-registry.yml` | the MCP server's entry in the official MCP Registry, published on a tag `mcp-v<version>` |
 | `LICENSE`, `LICENSE-DATA` | the two licenses, below |
 
 ## Contributing

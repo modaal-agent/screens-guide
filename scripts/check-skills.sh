@@ -7,9 +7,9 @@
 # check the scripts a skill ships, and a skill here ships none
 # (specs/002-agent-interfaces/spec.md, D5). S8 reads this repository's layout:
 # the marketplace at .claude-plugin/marketplace.json, and the plugin rooted at
-# skills/, with its manifest at skills/.claude-plugin/plugin.json. S17 to S19
+# skills/, with its manifest at skills/.claude-plugin/plugin.json. S17 to S20
 # are this repository's (spec 002 §5): the eval cases, the plugin root's file
-# types, and the plugin's version.
+# types, the plugin's version, and the MCP Registry's server.json.
 #
 # What they hold a skill to: frontmatter every install channel can parse, a body
 # inside the documented budgets, links that resolve, a README index that lists
@@ -369,6 +369,28 @@ elif parse(new) <= parse(base):
 PY
 }
 
+# py_s20 <root>: one line per way server.json departs from spec 002 §4.4.
+py_s20() {
+  python3 - "$1" <<'PY'
+import json, pathlib, sys
+path = pathlib.Path(sys.argv[1]) / 'server.json'
+try:
+    doc = json.loads(path.read_text())
+except Exception as error:
+    print(f"server.json does not parse: {error}"); raise SystemExit
+if doc.get('name') != 'io.github.modaal-agent/screens-guide':
+    print(f"name is {doc.get('name')!r}, not 'io.github.modaal-agent/screens-guide'")
+description = doc.get('description')
+if not isinstance(description, str) or not 1 <= len(description) <= 100:
+    print(f"description is {len(description) if isinstance(description, str) else description!r} characters, not 1 to 100")
+if not isinstance(doc.get('version'), str) or not doc['version']:
+    print("version is missing")
+remotes = doc.get('remotes') or []
+if remotes != [{'type': 'streamable-http', 'url': 'https://screens.guide/mcp'}]:
+    print(f"remotes is {remotes!r}, not the one streamable-http remote https://screens.guide/mcp")
+PY
+}
+
 plugin_version() {
   python3 -c 'import json, sys; print(json.load(sys.stdin).get("version", ""))'
 }
@@ -465,6 +487,22 @@ $s18"
       fail S19 "$s19"
     else
       ok S19 "skills/ changed since $base, and the version rose from $base_version to $new_version"
+    fi
+  fi
+
+  # ── S20: server.json is the registry entry spec 002 §4.4 describes ──
+  # mcp-registry.yml publishes it on a tag; the registry refuses a description
+  # over 100 characters, and lists whatever remote the file names.
+  local s20
+  if [ ! -f "$ROOT/server.json" ]; then
+    ok S20 "no server.json — nothing to check"
+  else
+    s20="$(py_s20 "$ROOT")"
+    if [ -n "$s20" ]; then
+      fail S20 "server.json is not the registry entry spec 002 §4.4 describes:
+$s20"
+    else
+      ok S20 "server.json names io.github.modaal-agent/screens-guide, a description within 100 characters and the one remote"
     fi
   fi
 
@@ -712,6 +750,17 @@ arm: with-only
 FIXTURE
 }
 
+seed_server() {
+  cat > "$1/server.json" <<'FIXTURE'
+{
+  "name": "io.github.modaal-agent/screens-guide",
+  "description": "A valid entry the self-test seeds one violation into.",
+  "version": "1.0.0",
+  "remotes": [{ "type": "streamable-http", "url": "https://screens.guide/mcp" }]
+}
+FIXTURE
+}
+
 # A git checkout of the fixture with one commit, for S19.
 seed_git() {
   git -C "$1" init -q
@@ -762,7 +811,7 @@ self_test() {
   trap 'rm -rf "$WORK"' EXIT
 
   # A seed is a check name, with a suffix after "-" when one check has two.
-  for seed in S1 S2 S3 S4 S5 S6 S7 S8 S8-version S9 S10 S11 S15 S16 S16-redaction S17 S17-type S17-key S18 S18-shebang S19; do
+  for seed in S1 S2 S3 S4 S5 S6 S7 S8 S8-version S9 S10 S11 S15 S16 S16-redaction S17 S17-type S17-key S18 S18-shebang S19 S20 S20-remote; do
     check="${seed%%-*}"
     root="$WORK/$seed"
     mkdir -p "$root"
@@ -812,6 +861,14 @@ self_test() {
       S19)
         seed_git "$root"
         echo 'A change with no version raise.' >> "$skill"
+        ;;
+      S20)
+        seed_server "$root"
+        perl -0pi -e 's/"description": "[^"]*"/"description": "'"$(printf 'x%.0s' $(seq 1 101))"'"/' "$root/server.json"
+        ;;
+      S20-remote)
+        seed_server "$root"
+        perl -0pi -e 's#https://screens.guide/mcp#https://example.com/mcp#' "$root/server.json"
         ;;
     esac
     expect_red "$check" "$root" || red=1

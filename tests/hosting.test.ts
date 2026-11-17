@@ -114,3 +114,30 @@ describe('the response headers', () => {
     for (const d of ['default-src', 'script-src', 'style-src', 'connect-src']) expect(csp).not.toContain(d)
   })
 })
+
+describe('the MCP Registry workflow', () => {
+  const workflow = readFileSync(join(ROOT, '.github/workflows/mcp-registry.yml'), 'utf8')
+  const server = JSON.parse(readFileSync(join(ROOT, 'server.json'), 'utf8'))
+
+  it('publishes on an mcp-v tag, in the mcp-registry environment, with OIDC', () => {
+    expect(workflow).toMatch(/tags: \['mcp-v\*'\]/)
+    expect(workflow).toMatch(/^\s+environment: mcp-registry$/m)
+    expect(workflow).toMatch(/^\s+id-token: write/m)
+    expect(workflow).toContain('./mcp-publisher login github-oidc')
+    expect(workflow).toContain('./mcp-publisher publish')
+  })
+
+  it('pins mcp-publisher to a release tag and verifies its Sigstore bundle before extracting it', () => {
+    expect(workflow).toMatch(/MCP_PUBLISHER_VERSION: v\d+\.\d+\.\d+$/m)
+    expect(workflow).not.toContain('releases/latest')
+    expect(workflow.indexOf('cosign verify-blob')).toBeLessThan(workflow.indexOf('tar xzf'))
+    expect(workflow).toContain('release.yml@refs/tags/${MCP_PUBLISHER_VERSION}')
+    expect(workflow).toMatch(/sigstore\/cosign-installer@[0-9a-f]{40}/)
+  })
+
+  it("stops when the tag's version is not server.json's", () => {
+    expect(workflow).toContain('tag="${GITHUB_REF_NAME#mcp-v}"')
+    expect(workflow).toContain("jq -r .version server.json")
+    expect(server.version).toMatch(/^\d+\.\d+\.\d+$/)
+  })
+})

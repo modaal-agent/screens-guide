@@ -58,6 +58,7 @@ stays green. Run it after editing a check.
 | S17 | an eval case under `evals/` with no `prompt.md` body, a frontmatter key the runner does not read, no grader, a grader type the runner does not know or a key that type does not take; an `evals/` under `skills/` |
 | S18 | a file under `skills/` that is not Markdown, JSON or PNG, starts with `#!`, or is a symbolic link |
 | S19 | a change under `skills/` since the base commit with `plugin.json`'s `version` not raised. The base is `$SKILLS_BASE_REF`, which `ci.yml` sets to the pull request's base or the push's previous commit, else `HEAD` |
+| S20 | a `server.json` that does not parse, is not named `io.github.modaal-agent/screens-guide`, has no `version`, a description outside 1 to 100 characters, or other than the one `streamable-http` remote `https://screens.guide/mcp` |
 
 The check ids follow `scripts/check-skills.sh` in
 [modaal-agent/skills](https://github.com/modaal-agent/skills), which this script is adapted from.
@@ -133,6 +134,12 @@ Cloudflare serves every other path from `dist/` without running it, unless no fi
   `worker/mcp.ts` carries the same headers for `/mcp`.
 - The day limit reads `MCP_DAY_LIMIT` from the environment when it is set, so
   `npx wrangler dev --var MCP_DAY_LIMIT:12` reaches the limit in a few requests. Deploy without it.
+- `server.json` is the server's entry in the official MCP Registry. After a change to a tool or its
+  schemas reaches `main` with `server.json`'s `version` raised, push the tag `mcp-v<version>`:
+  `.github/workflows/mcp-registry.yml` checks that the tag names that version, runs
+  `scripts/check-skills.sh` (S20 reads `server.json`), verifies the pinned `mcp-publisher` release
+  with `cosign`, and publishes after the `mcp-registry` environment's reviewer approves. The job
+  logs in through GitHub's OIDC, so it holds no secret.
 
 ## Skills, the plugin and the eval cases
 

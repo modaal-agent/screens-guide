@@ -208,6 +208,14 @@ messages, pull-request titles, bodies and review comments, and the site built fr
 - **Send no usage event the specs do not list** (spec 001 §5.5, spec 002 §2.5). A new event, or a
   new property on one, changes the spec, the code and `/privacy` in the same pull request.
 
+## The MCP server
+
+- **Raise `version` in `server.json` when a tool, its input schema or its output schema changes**:
+  it is the MCP interface's version, and the registry takes each version once. The dataset's
+  version reaches clients in `serverInfo`, so a data round leaves `server.json` alone (spec 002
+  D10). Publish by pushing the tag `mcp-v<version>` after the change is on `main`;
+  `.github/workflows/mcp-registry.yml` stops when the tag and the file disagree.
+
 ## The skill and the plugin
 
 - **A skill is written for an agent in someone else's repository**, working on a mobile screen.
