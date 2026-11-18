@@ -8,8 +8,9 @@ simulators and Android emulators. The site publishes them for coding agents firs
 JSON Schema, `llms.txt`, Markdown copies, an MCP server and an agent skill, and for people second,
 as tables, drawings and playgrounds. Modaal measures and publishes the data.
 
-The repository holds the plan today: [specs/](specs/) has three specs, and each one's "Phasing"
-section lists the commits that build it. Spec 001 phase 2, this file set, is the first.
+[specs/](specs/) has three specs, and each one's "Phasing" section lists the commits that build
+the site. The dataset is in `data/` (spec 001 phase 3), the pages in `src/pages/` (phase 4), and the
+files for agents beside them (phase 5).
 
 | spec | what it plans |
 | --- | --- |
@@ -17,16 +18,53 @@ section lists the commits that build it. Spec 001 phase 2, this file set, is the
 | [002-agent-interfaces](specs/002-agent-interfaces/spec.md) | the MCP server, Markdown by content negotiation, the skill and the Claude Code plugin |
 | [003-data-rounds](specs/003-data-rounds/spec.md) | the measurement rounds that add devices and fields after launch |
 
+## The skill and the plugin
+
+`skills/` is a Claude Code plugin, and the repository is its marketplace. The plugin carries one
+skill and connects the MCP server at https://screens.guide/mcp.
+
+| skill | what it does |
+| --- | --- |
+| [`screens-guide`](skills/screens-guide/) | lays out and reviews a mobile screen against the measured windows, safe areas, corner radii, system bars, size classes and folds, through the MCP tools, the data files or its own snapshot `references/devices.md` |
+
+Install it in Claude Code:
+
+```
+/plugin marketplace add modaal-agent/screens-guide
+/plugin install screens-guide@screens-guide
+```
+
+On Claude Code 2.1.275 or later, one line does both:
+`/plugin install screens-guide --marketplace modaal-agent/screens-guide`. Other agents install the
+skill alone with `npx skills add modaal-agent/screens-guide`. https://screens.guide/agents gives
+every channel's steps.
+
 ## Build and run
 
-Spec 001 phase 4 adds `package.json` and the build. The checks that run today need bash and
-python3:
+The site needs Node 24 (`.node-version`). The repository checks need bash and python3:
 
 ```bash
 bash scripts/check-agent-rules.sh     # AGENTS.md and CLAUDE.md are byte-identical
 scripts/check-skills.sh               # skills, plugin manifests and spec references
 scripts/check-skills.sh --self-test   # each check red against a seeded violation
+npm ci
+npm run check:data                    # data/devices.json against its schema and rules
+npm run check                         # astro check: the pages' and the code's types
+npm run build                         # the static site, into dist/
+npm test                              # vitest; its site tests read dist/, so build first
+npm run gen:skill                     # skills/screens-guide/references/devices.md from data/devices.json
+npm run dev                           # the site at http://localhost:4321, rebuilt on each save
+npx wrangler dev                      # dist/ and the MCP server as the Worker serves them, at http://localhost:8787
 ```
+
+## Deploy
+
+`.github/workflows/deploy.yml` runs the checks, builds the site and runs `npx wrangler deploy` on
+every push to `main`. The Worker `screens-guide` (`wrangler.jsonc`) serves `dist/` as static assets
+at https://screens.guide, and runs `worker/index.ts` for the routes in `worker/routes.ts`: `/mcp`,
+the MCP server; the pages, which it answers with HTML or their Markdown copy by the `Accept` header;
+and the data and text files, which it counts. The workflow needs
+the repository secret `CLOUDFLARE_API_TOKEN` and the repository variable `CLOUDFLARE_ACCOUNT_ID`.
 
 ## Layout
 
@@ -35,9 +73,24 @@ scripts/check-skills.sh --self-test   # each check red against a seeded violatio
 | `AGENTS.md` | the rules an agent working in this repository follows |
 | `CLAUDE.md` | a byte-identical copy of `AGENTS.md`, the file Claude Code reads |
 | `specs/NNN-slug/spec.md` | the plan behind a change too big to carry in a commit message |
+| `data/devices.json` | the dataset, written by an export from the measurement runs, never by hand |
+| `data/schema.json`, `data/CHANGELOG.md` | its JSON Schema, and one entry per dataset version |
+| `src/lib/` | the code the checks and the site share: the dataset's types, the data checks, the geometry, the table rows, the CSV and the files for agents |
+| `src/islands/` | the Preact islands: the explorer, the comparison and the playgrounds |
+| `src/lib/posthog.ts` | PostHog's project token and host, which the pages and the Worker import |
+| `src/lib/analytics.ts` | the pages' PostHog options, their events and the events' `/privacy` rows |
+| `src/lib/pages/` | each page's content as blocks (`src/lib/doc.ts`), rendered as HTML by `DocBlocks.astro` and as the page's `.md` copy |
+| `src/pages/`, `src/components/`, `src/layouts/`, `src/styles/` | the pages and the data and text files, built by Astro into `dist/`; every number on them comes from `data/devices.json` |
+| `astro.config.mjs`, `tsconfig.json` | the build: one `.html` file per page, no trailing slashes |
+| `worker/` | the Worker script: the MCP server at `/mcp` with its tools and rate limit, Markdown by content negotiation, and the usage events |
+| `skills/`, `.claude-plugin/marketplace.json` | the Claude Code plugin and its marketplace: the skill, the plugin manifest, the icon and `.mcp.json` |
+| `assets/plugin-icon.svg` | the source of the plugin's icon |
+| `scripts/check-data.ts`, `scripts/gen-skill.ts`, `tests/` | `npm run check:data`, `npm run gen:skill`, and the vitest files |
 | `scripts/check-agent-rules.sh` | the comparison of `AGENTS.md` with `CLAUDE.md` |
 | `scripts/check-skills.sh` | the checks on skills, plugin manifests and specs, with `--self-test` |
-| `.github/workflows/ci.yml` | the `rules` job and the `skills` job, on every pull request and push to `main` |
+| `.github/workflows/ci.yml` | the `rules`, `skills` and `site` jobs, on every pull request and push to `main` |
+| `.github/workflows/deploy.yml`, `wrangler.jsonc`, `public/_headers` | the deploy on a push to `main`, the Worker, and the response headers |
+| `server.json`, `.github/workflows/mcp-registry.yml` | the MCP server's entry in the official MCP Registry, published on a tag `mcp-v<version>` |
 | `LICENSE`, `LICENSE-DATA` | the two licenses, below |
 
 ## Contributing

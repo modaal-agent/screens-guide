@@ -26,6 +26,10 @@ Run from the repository root:
 bash scripts/check-agent-rules.sh     # AGENTS.md and CLAUDE.md are byte-identical (ci.yml, `rules`)
 scripts/check-skills.sh               # skills, plugin manifests, spec references (ci.yml, `skills`)
 scripts/check-skills.sh --self-test   # each check red against a seeded violation (ci.yml, `skills`)
+npm ci && npm run check:data          # data/devices.json against data/schema.json and its rules (ci.yml, `site`)
+npm run check && npm run build        # astro check, then the site into dist/ (ci.yml, `site`)
+npm test                              # vitest; the site tests read dist/ (ci.yml, `site`)
+npx wrangler dev                      # dist/ and /mcp as the Worker serves them (no CI job)
 ```
 
 ## State a rule once
@@ -36,8 +40,14 @@ scripts/check-skills.sh --self-test   # each check red against a seeded violatio
 - The plugin's name is `name` in `skills/.claude-plugin/plugin.json`, and
   `.claude-plugin/marketplace.json` has one entry with that name. S8 compares the two.
 - README.md's skill table is the index of `skills/`. S9 fails a skill directory it does not mention.
-- The PostHog project token and host are written once, as constants in `src/lib/analytics.ts`; the
+- The PostHog project token and host are written once, as constants in `src/lib/posthog.ts`; the
   pages and the Worker import them (spec 001 §5.5).
+- The paths the Worker runs for are `RUN_WORKER_FIRST` in `worker/routes.ts`, and again
+  `run_worker_first` in `wrangler.jsonc`, which `tests/hosting.test.ts` compares. A new page route
+  goes into `PAGE_ROUTES`; the test fails on a built page or counted file no route matches.
+- The MCP server's limits are `MINUTE_LIMIT` and `DAY_LIMIT` in `worker/ratelimit.ts`, and the
+  minute limit again in `wrangler.jsonc`'s `ratelimits`, which `tests/hosting.test.ts` compares.
+  `/agents` and `/privacy` print the constants.
 
 ## What goes in which document
 
@@ -190,8 +200,21 @@ messages, pull-request titles, bodies and review comments, and the site built fr
   (spec 001 D5).
 - **Pages, data copies, Markdown copies and `llms.txt` are generated from `data/devices.json`.** A
   page holds no number of its own.
+- **A page's text is written once, as blocks in `src/lib/pages/`.** The `.astro` page renders them
+  with `DocPage`, and the page's `.md` copy is written from the same blocks. Markup with no
+  Markdown form, such as a drawing, is a `slot` block, with a `markdown` alternative when it shows
+  values. A new page goes into `sitePages()` in `src/lib/pages/index.ts`, which the sitemap,
+  `llms.txt` and the `.md` copies read.
 - **Send no usage event the specs do not list** (spec 001 §5.5, spec 002 §2.5). A new event, or a
   new property on one, changes the spec, the code and `/privacy` in the same pull request.
+
+## The MCP server
+
+- **Raise `version` in `server.json` when a tool, its input schema or its output schema changes**:
+  it is the MCP interface's version, and the registry takes each version once. The dataset's
+  version reaches clients in `serverInfo`, so a data round leaves `server.json` alone (spec 002
+  D10). Publish by pushing the tag `mcp-v<version>` after the change is on `main`;
+  `.github/workflows/mcp-registry.yml` stops when the tag and the file disagree.
 
 ## The skill and the plugin
 
@@ -205,8 +228,9 @@ messages, pull-request titles, bodies and review comments, and the site built fr
   the first 5,000 tokens of a loaded skill. The line budgets of S5 do not hold a token budget. Move
   material to `references/` before the body reaches it.
 - **Write no version literal into a skill.** A measured number in a skill's body names its device
-  and runtime; the full device table is `references/devices.md`, which the build generates from the
-  dataset (spec 002 §4.1).
+  and runtime, and `tests/skill.test.ts` recomputes it from the dataset: a new number in `SKILL.md`
+  gets a `claim` there. The full device table is `references/devices.md`, which `npm run gen:skill`
+  writes from the dataset and the test compares (spec 002 §4.1).
 - **A link that leaves a skill's directory is an absolute `https://` URL.** Every install channel
   but the plugin copies the skill's directory alone. S6 checks the relative links.
 - **The plugin root, `skills/`, holds Markdown, JSON and the plugin's PNG icon only.** Anthropic's

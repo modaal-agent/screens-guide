@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "screens-guide": {
+      "type": "http",
+      "url": "https://screens.guide/mcp"
+    }
+  }
+}

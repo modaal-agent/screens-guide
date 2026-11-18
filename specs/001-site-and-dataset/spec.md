@@ -1,7 +1,7 @@
 # 001 — The site and the dataset
 
 **Status:** Written 2026-11-17, revised in place the same day with the answers to §10.1 to §10.8.
-Not implemented. **Baseline:** `main` at `77f08eb`, the repository files.
+Phase 3 implemented (§7.1). **Baseline:** `main` at `77f08eb`, the repository files.
 **Obsoletes:** nothing.
 
 **Relates to:**
@@ -30,8 +30,9 @@ Not implemented. **Baseline:** `main` at `77f08eb`, the repository files.
    comparison and playgrounds on top (§3).
 6. **Astro builds the site, and a Cloudflare Worker serves it**, deployed from GitHub Actions
    (§5, D9, D10).
-7. **Seven phases in this repository** (§7). Creating the GitHub repository, the Cloudflare secrets
-   and PostHog's cookieless setting are the user's steps in phase 7.
+7. **Seven phases in this repository** (§7). The user's steps: private vulnerability reporting
+   now, which `SECURITY.md` names; then, for phase 7, the Cloudflare secret and variable, the
+   zone's bot settings and PostHog's cookieless setting (§1.1).
 8. **PostHog counts page views and the use of the interactive parts, in its EU region, with no
    cookie** (§5.5, D15). Spec 002 adds events for the requests agents make.
 9. **The probes that read the devices stay private** (D8, §10.5). `/method` names the API or
@@ -45,8 +46,13 @@ Not implemented. **Baseline:** `main` at `77f08eb`, the repository files.
 
 ### 1.1 This repository
 
-Created 2026-11-17, with no remote. Its first commit on `main`, `77f08eb`, holds the repository
-files of §5.3: phase 2, landed ahead of this spec. This spec, spec 002 and spec 003 follow it.
+Created 2026-11-17. Its first commit on `main`, `77f08eb`, holds the repository files of §5.3:
+phase 2, landed ahead of this spec. This spec, spec 002 and spec 003 follow it in `52aa47d`.
+
+Pushed the same day to https://github.com/modaal-agent/screens-guide, public, with `main` as its
+default branch. CI run 44176997462 passed on `52aa47d` in 13 s. Read on 2026-11-17 with `gh`:
+private vulnerability reporting is off, though `SECURITY.md` sends reports there, and the
+repository has no Actions secrets or variables.
 
 ### 1.2 The recorded measurements
 
@@ -64,7 +70,7 @@ split-window rows marked as estimates, which this spec leaves out (D5).
 | iPhone 16 | iOS 18.6, 26.5, 27.0, 27.2, 27.3 beta | portrait on each; landscape on 18.6, 27.0, 27.2 |
 | iPhone 16 Pro Max | iOS 18.6 | portrait |
 | iPhone 17 | iOS 27.0, 27.2, 27.3 beta | portrait on each; landscape on 27.0 |
-| iPhone 17 Pro | iOS 27.0, 27.2 | portrait; landscape on 27.2 |
+| iPhone 17 Pro | iOS 27.0 | portrait |
 | iPhone 17 Pro Max | iOS 26.5, 27.0 | portrait on each; landscape on 26.5 |
 | iPhone 17e | iOS 27.2, 27.3 beta | portrait |
 | iPhone Air | iOS 27.0, 27.2, 27.3 beta | portrait on each; landscape on 27.0 |
@@ -99,7 +105,7 @@ What a reading holds, by group:
   16 pt on the iPhone SE (3rd generation), 16, 17, 17e and 18 Pro; 20 pt on the iPhone Air, the
   18 Pro Max, the iPads and the iPhone Duo.
 - **Regions:** the occlusion regions UIKit reports (the iPhone 16's top strip 393 × 54, the
-  iPhone 17 Pro's 402 × 54, the iPhone Duo's camera and status block), the Android cutout's
+  iPad (A16)'s 32 pt strip, the iPhone Duo's camera and status block), the Android cutout's
   rectangle in pixels (the Pixel 8 `[479, 0, 601, 132]`), and the folds: bounds, the margins of the
   iPhone Duo's 40 pt division band, whether the fold separates the halves, and the hinge angle
   ranges of each posture.
@@ -130,6 +136,10 @@ Values that differ between two ways of reading them:
   21.5, the profile's values. On the iPhones the two readings agree (§10.7).
 - The device catalog rounds Android values to whole dp (Pixel 8 status bar 50). The pixel readings
   give 132 px at 420 dpi, 50.29 dp. The dataset takes the pixel readings (§2.3).
+
+A run on 2026-09-30 read the iPhone 17 Pro in portrait and landscape, with a 402 × 54 occlusion
+region, on an iOS 27.2 build it did not record. The dataset keys each reading by build (§2.2), so
+the export leaves that run out; spec 003's R2 reads every iPhone in both orientations.
 
 No run measured: keyboard heights; Display Zoom; iPad split and Stage Manager windows (the catalog's
 rows for them are estimates); the corner radii of the Pixel Fold and the small phone (their
@@ -222,38 +232,45 @@ names checked before the purchase are in D1.
 
 ### 2.2 A reading
 
-The top level holds `version` (§2.4), `updated` (a date), `license` (`CC-BY-4.0`, D12), `units` and
-`devices`. A
-device holds `id`, `name`, `platform` (`ios`, `android`), `kind` (`phone`, `tablet`, `foldable`),
-`unit` (`pt`, `dp`), `display` and `readings`. For a foldable, `screens` names each pose's screen
-(`closed`, `open`, `half-open`, `tent`) and its display.
+The top level holds `version` (§2.4), `updated` (a date), `license` (`CC-BY-4.0`, D12), `units`,
+`runs` and `devices`. `runs` describes each measurement run by id: its date, simulator or
+emulator, and what it reads. A device holds `id`, `name`, `platform` (`ios`, `android`), `kind`
+(`phone`, `tablet`, `foldable`), `unit` (`pt`, `dp`), `displays`, `current` and `readings`.
+`displays` holds each display by id (`main`; `cover` and `inner` on a foldable) with its size in
+the device's unit, its pixels, its `scale` (iOS) or `density` (Android) and the cutout's kind. For
+a foldable, `screens` names each pose's screen (`closed`, `open`, `half-open`, `tent`) and its
+display.
 
-One reading of the iPhone 17 in portrait on iOS 27.0:
+One reading of the iPhone 17 in portrait on iOS 27.0, from `data/devices.json` 1.0.0:
 
 ```json
 {
   "runtime": { "os": "iOS", "version": "27.0", "build": "24A434", "prerelease": false },
-  "measured": { "on": "simulator", "date": "2026-10-14" },
+  "measured": { "on": "simulator", "date": "2026-11-09",
+                "runs": ["ios-2026-10-14", "ios-runtimes-2026-11-09", "ios-tabbar-2026-11-01"] },
   "screen": "main",
   "orientation": "portrait",
+  "rotation": 0,
   "window": { "width": 402, "height": 874 },
   "pixels": { "width": 1206, "height": 2622 },
   "safeAreaInsets": { "top": 62, "bottom": 34, "left": 0, "right": 0 },
   "cornerRadii": {
     "profile": { "topLeft": 62, "topRight": 62, "bottomRight": 62, "bottomLeft": 62,
-                 "source": "the simulator's device profile" },
-    "measured": null
+                 "source": "the simulator's device profile (capabilities.plist), read 2026-11-17" },
+    "measured": { "topLeft": 62, "topRight": 62, "bottomRight": 62, "bottomLeft": 62,
+                  "source": "SwiftUI concentricCornerRadii of a view that fills the window, iOS 27.0 (24A434)" }
   },
   "sizeClass": { "width": "compact", "height": "regular" },
   "statusBar": { "placement": "top", "frame": { "x": 0, "y": 0, "width": 402, "height": 54 } },
-  "navigationBar": { "inline": { "top": 62, "height": 54 }, "large": null },
-  "tabBar": { "style": "capsule", "bottom": 21, "height": 62, "sideGap": 21 },
-  "contentMargin": 16,
-  "regions": [],
+  "navigationBar": { "inline": { "top": 62, "height": 54 }, "large": { "top": 62, "height": 106 } },
+  "tabBar": { "style": "capsule", "frame": { "x": 64, "y": 791, "width": 274, "height": 62 },
+              "bottom": 21, "height": 62, "sideGap": 21 },
+  "contentMargin": null,
+  "regions": null,
   "fold": null,
   "missing": {
-    "navigationBar.large": "not read on this runtime",
-    "cornerRadii.measured": "not read on this runtime"
+    "contentMargin": "not read on this runtime",
+    "regions": "not read on this device"
   }
 }
 ```
@@ -261,18 +278,34 @@ One reading of the iPhone 17 in portrait on iOS 27.0:
 - Every position is in the device's unit, in window coordinates, origin at the window's top left,
   for that orientation. `cornerRadii` is given for the orientation, so a consumer does no rotation
   (D7).
+- `orientation` is the window's shape. `rotation` is the angle from the display's natural
+  orientation (UIKit's portrait on iOS): at 90 the device's top edge is on the window's left,
+  UIKit's `landscapeRight` and Android's `ROTATION_90`. A device read in both landscapes has a
+  reading at 90 and at 270.
+- `measured.runs` names the runs the reading's values come from; `measured.date` is the newest of
+  their dates. Two runs that read one value for the same device, build, screen and rotation agree
+  within 0.01, or the export stops (§2.3).
 - `cornerRadii` holds two value sets, `profile` and `measured`, each with a `source` that says
   where it came from (§2.3, D13).
 - `statusBar.placement` is `top`, `hidden`, `left`, `right` or `navigation-bar` (the iPhone Duo's
   tall inner window, where the time sits in the navigation bar's row).
-- `tabBar.style` is `capsule` (iOS 26 and later), `bar` (iOS 18 and Android's navigation bar),
-  `column` (the iPhone Duo, in a side inset) or `null` where the platform puts none at the bottom.
-- `regions` lists occlusion regions with `kind`, `frame` and `active`.
+- `navigationBar` is UIKit's bar with an inline and with a large title; on Android, `inline` is
+  Material 3's `TopAppBar` inside the safe area.
+- `tabBar.style` is `capsule` (iOS 26 and later), `bar` (iOS 18 and Android's navigation bar) or
+  `column` (the iPhone Duo, in a side inset). `frame` holds three tabs; `sideGap` is the capsule's
+  smallest gap to a side edge with five tabs with long titles. On the iPads the tab bar sits at
+  the top, so `tabBar` is `null` with that reason.
+- Android readings add `systemBarInsets` and `cutoutInsets` beside the combined `safeAreaInsets`,
+  and `sizeClassV2` beside `sizeClass` (the window size classes V1 and V2).
+- `regions` lists occlusion regions and the Android display cutout with `kind`, `frame` and
+  `active`.
 - `fold` holds `axis`, `frame`, `margin` and `separates`.
-- A field no run measured is `null`, and `missing` gives the reason per field (D5).
+- A field no run measured is `null`, and `missing` gives the reason per field path (D5). A screen
+  with no hinge across it has a `null` `fold` with no reason.
 
-A device's `current` names the reading set a page shows first: the newest runtime that is not a
-pre-release and has a reading in each orientation the device has (D6, D14).
+A device's `current` names the reading set a page shows first, by version and build: the newest
+build that is not a pre-release and has a reading in each screen and rotation the device has (D6,
+D14). Where no build has them all, it is the build with the most, newest first.
 
 ### 2.3 Rules the exporter applies
 
@@ -326,7 +359,7 @@ reads only `data/devices.json`.
 | `/agents` | the data files, the schema, the license, how to cite; spec 002 adds the MCP server and the skill |
 | `/method` | how each value is read, with which API or command, on which runtime; what no run measured |
 | `/changelog` | `data/CHANGELOG.md` |
-| `/privacy` | what PostHog receives from the pages and from the Worker, that it stores it in PostHog's EU region, that the site sets no cookie (§5.5), and the request count `/mcp` keeps per hashed client address for its rate limit (spec 002 §2.6) |
+| `/privacy` | what PostHog receives from the pages, that it stores it in PostHog's EU region, and that the site sets no cookie (§5.5); spec 002 adds the Worker's events and the rate limit's count per hashed client address, each with the code that sends or keeps it |
 | any other path | the 404 page |
 
 ### 3.2 What each page shows
@@ -358,6 +391,10 @@ Preact components, rendered on the server and hydrated in the browser (D9):
 - **The playgrounds**: pixel snapping and corner fit from the docs page, and "this device", which
   reads the visitor's CSS `env(safe-area-inset-*)`, `devicePixelRatio` and screen size, and names
   the measured device closest to them.
+- **`src/lib/geometry.ts`**: the arithmetic the playgrounds use, pixel snapping and the fit of a
+  frame's corner against the display's (the depth inside or outside the curve, and the concentric
+  radius). Spec 002's `check_layout` imports the same file and adds its other findings to it
+  (spec 002 §2.4).
 
 ---
 
@@ -428,6 +465,9 @@ variable `CLOUDFLARE_ACCOUNT_ID`.
   and spec references, with its `--self-test`.
 - `.github/workflows/ci.yml`, with two jobs on every pull request and push to `main`: `rules` runs
   `scripts/check-agent-rules.sh`, and `skills` runs `scripts/check-skills.sh` and its self-test.
+- `SECURITY.md` sends reports to GitHub's private vulnerability reporting. The user turns it on in
+  the repository's settings (**Settings → Advanced Security → Private vulnerability reporting**);
+  it was off on 2026-11-17 (§1.1).
 - `AGENTS.md` adds this repository's rules:
   - The repository is public. A commit, comment, page or generated file names no private
     repository, internal path or internal project.
@@ -474,7 +514,9 @@ zone's bot settings, any setting that blocks AI crawlers or replaces `robots.txt
   `eu-assets.i.posthog.com` (§1.7).
 - Spec 002 §2.5 sends events for the requests the Worker serves: MCP messages, pages, and the
   files agents fetch.
-- `/privacy` (§3.1) lists the events of this section and of spec 002 §2.5.
+- `/privacy` (§3.1) lists the events of this section. Spec 002's phases add the Worker's events
+  (spec 002 §2.5) and the rate limit's count (spec 002 §2.6) to it, each in the pull request that
+  adds the code, as `AGENTS.md` §"The dataset and the pages" requires.
 - The user's step in phase 7: turn on cookieless mode in the PostHog project's settings. Without
   it PostHog drops the pages' events (§1.6).
 
@@ -492,7 +534,10 @@ Each phase runs the checks that exist by then; CI runs them on every pull reques
   reading set.
 - `npm test` (vitest): the CSV round-trips to the JSON's values; `llms.txt` lists every page; every
   page has its `.md` copy and every device its JSON file; the device table on `/` has one row per
-  device; analytics starts on the host `screens.guide` and on no other host.
+  device; analytics starts on the host `screens.guide` and on no other host; `src/lib/geometry.ts`
+  gives the corner cases of spec 002 §2.3 on the iPhone 17, radius 62 pt: a square corner 16 pt
+  from the side and 34 pt from the bottom lies 8.15 pt inside the curve, at 16 pt from both edges
+  it is cut off by 3.05 pt, and the concentric radius for a 16 pt margin is 46 pt.
 - `bash scripts/check-agent-rules.sh`.
 - With `npx wrangler dev`: each URL of §3.1 and §4 answers 200 with the expected `Content-Type`; an
   unknown path answers 404; the headers of §4.4 arrive.
@@ -511,11 +556,11 @@ Each phase runs the checks that exist by then; CI runs them on every pull reques
 | --- | --- | --- |
 | 1 | `specs/001-site-and-dataset/spec.md` | the spec opens the series; specs 002 and 003 land in the same commit, because the three cite each other's sections |
 | 2 | the repository files of §5.3, the two license files among them | every later phase follows `AGENTS.md` |
-| 3 | `data/devices.json`, `data/schema.json`, `data/CHANGELOG.md`, `npm run check:data` and its CI job; the exporter's commit in the private repository beside it | the pages read the dataset |
-| 4 | `package.json` and its lockfile, `.node-version`, `astro.config.mjs`, the layout and stylesheet, and the pages of §3.1 with their tables and drawings, no islands | the pages are what phases 5 and 6 extend |
+| 3 | `package.json` and its lockfile, `.node-version`, `data/devices.json`, `data/schema.json`, `data/CHANGELOG.md`, `npm run check:data` and its CI job; the exporter's commit in the private repository beside it | the pages read the dataset; `npm run check:data` is the first npm script, so `package.json` arrives with it |
+| 4 | `astro.config.mjs`, the layout and stylesheet, and the pages of §3.1 with their tables and drawings, no islands | the pages are what phases 5 and 6 extend |
 | 5 | the files of §4 and their tests | written from the same data the pages use |
-| 6 | the interactive parts of §3.4, `src/lib/analytics.ts` and the events of §5.5, `/privacy`, and the content security policy they need | the HTML they hydrate exists from phase 4; the events come from the interactive parts |
-| 7 | `wrangler.jsonc` with the custom domain, `public/_headers`, `deploy.yml`; then the user's steps: the GitHub repository `modaal-agent/screens-guide`, the secret and variable, the zone's bot settings, PostHog's cookieless setting; the first deploy and the live checks | the site goes live once it is complete |
+| 6 | the interactive parts of §3.4 with `src/lib/geometry.ts` and its tests, `src/lib/analytics.ts` and the events of §5.5, `/privacy` with those events, and the content security policy they need | the HTML they hydrate exists from phase 4; the events come from the interactive parts |
+| 7 | `wrangler.jsonc` with the custom domain, `public/_headers`, `deploy.yml`; then the user's steps: the secret and variable, the zone's bot settings, PostHog's cookieless setting; the first deploy and the live checks | the site goes live once it is complete; the GitHub repository exists since 2026-11-17 (§1.1) |
 
 Commit subjects carry the prefix `[001-site-and-dataset]`.
 
@@ -523,7 +568,13 @@ Commit subjects carry the prefix `[001-site-and-dataset]`.
 
 | phase | landed | departures from the plan |
 | --- | --- | --- |
-| 2 | `77f08eb`, the repository's first commit | landed before phase 1, the spec; `scripts/check-skills.sh` and the `skills` job added beside the agent rules check |
+| 1 | `52aa47d`, with specs 002 and 003 | — |
+| 2 | `77f08eb`, the repository's first commit | landed before phase 1, the spec; `scripts/check-skills.sh` and the `skills` job added beside the agent rules check; turning on private vulnerability reporting, which `SECURITY.md` names, added to the user's steps (§5.3) |
+| 3 | `37a3da0`, with the exporter's two commits in the private measurement repository (E13) | the reading of §2.2 gained `rotation`, `measured.runs`, the top-level `runs`, `displays` keyed by display (the plan had one `display`), `screens` for the foldables only, the Android fields `systemBarInsets`, `cutoutInsets` and `sizeClassV2`, `tabBar.frame`, and `prerelease` on every runtime; the iPhone 17 Pro's 27.2 run left out because it recorded no build (§1.2); `ajv` 8.20.0 added for the schema check; the CI job is `site`, which phase 4 extends with the build |
+| 4 | `d9bc09e` | `src/lib/geometry.ts` and its tests came forward from phase 6, because `/playground` shows pixel snapping and corner fit as static tables computed with it; `/privacy` landed with the facts that hold before analytics (no cookie, no browser storage, Cloudflare's request logs), and phase 6 adds PostHog's events; `/compare` draws the four devices of `COMPARE_DEFAULT` (`src/lib/data.ts`), and phase 6's island reads `?ids`; the CI job `site` runs `npm run check` (astro check, with `@astrojs/check` 0.9.12, `typescript` 6.0.3 and `@types/node` 24.19.2) and `npm run build` before `npm test`; `tests/site.test.ts` reads `dist/` and also fails on a word joined to the value after it, because Astro drops the line break before a line that starts with an expression or an inline element |
+| 5 | `f16069f` | each page's text moved into a `Doc` of blocks in `src/lib/pages/`, which the `.astro` page renders and `markdownCopy()` writes as the `.md` copy, so the text is written once (CONTRIBUTING.md §"Pages and their Markdown copies"); `/data/v1/devices/<id>.json` holds the device with the dataset's `version`, `updated`, `license`, `units` and the runs its readings name; `devices.csv` has one row per reading, with device columns, `display_scale`, `display_density` and `current` first, and lists and `missing` as JSON text; `version.json` adds the schema's URL; `llms-full.txt` gives each device one table of its current build, a column per screen and rotation; `llms.txt`'s sections are Data files, Devices, Pages and Optional; the headers of §4.4 land with `public/_headers` in phase 7 |
+| 6 | `eaeec80`, `4f95b41` | `eaeec80` moved the formatters to `src/lib/format.ts` so the islands do not bundle the dataset; it also carried a staged deletion of `DeviceDrawing.astro` and does not build on its own, which `4f95b41` restores. The content security policy is Astro's `security.csp`, written into each page's `<meta>` tag: `script-src` and `style-src` are `'self'` plus the SHA-256 hashes of the inline loader Astro writes for the islands (§1.7's first item: WebKit hydrates the islands under it, and blocks an injected inline script and a fetch to another origin); `frame-ancestors` goes into `public/_headers` in phase 7. `posthog-js` is its slim no-external bundle, imported dynamically: with the site's options against a local recorder it loaded no script but its own chunk, sent one `POST /e/`, no flags or config request, and left no cookie or storage (§1.7's sixth item); 52.9 KB gzip, loaded on screens.guide only. A device page's island scripts are about 16 KB gzip (§1.7's second item). `capture_pageleave` is off, so the page view and the four events are all that is sent; `/privacy` lists them from `EVENT_DOCS` in `src/lib/analytics.ts`. `playground_used` for "this device" is sent when it has read the screen, which needs no input. The explorer's device picker opens the chosen device's page |
+| 7 | `f84206f`, the code part; the user's steps and the live checks are open | `deploy.yml` runs on a push to `main` only, because `ci.yml`'s `site` job runs the same checks on every pull request; `wrangler` 4.159.0 is a dev dependency; `send_metrics` is off. `npx wrangler dev` gave `.md` files `text/markdown; charset=utf-8` and `devices.csv` `text/csv; charset=utf-8`, so `public/_headers` sets no `Content-Type` (§1.7's third item); every header of §4.4 arrived, an unknown path answered 404, and in WebKit four pages requested no host but the local one. Open: the secret `CLOUDFLARE_API_TOKEN`, the variable `CLOUDFLARE_ACCOUNT_ID`, the zone's bot settings (§5.4), PostHog's cookieless setting (§5.5), private vulnerability reporting (§5.3), the merge to `main` that runs the first deploy, and §6's checks against https://screens.guide |
 
 ---
 

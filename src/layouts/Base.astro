@@ -1,0 +1,70 @@
+---
+import '../styles/global.css'
+import { DATA, REPOSITORY, SITE } from '../lib/data.ts'
+
+interface Props {
+  title: string
+  description: string
+  /** A schema.org object written into the head as JSON-LD. */
+  jsonLd?: object
+}
+
+const { title, description, jsonLd } = Astro.props
+const path = Astro.url.pathname.replace(/\.html$/, '').replace(/\/index$/, '/') || '/'
+const canonical = new URL(path, SITE).href
+const nav = [
+  ['/', 'Devices'],
+  ['/compare', 'Compare'],
+  ['/runtimes', 'Runtimes'],
+  ['/guide', 'Guide'],
+  ['/playground', 'Playground'],
+  ['/agents', 'For agents'],
+  ['/method', 'Method'],
+]
+const fullTitle = path === '/' ? title : `${title} · screens.guide`
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:type" content="website" />
+    {jsonLd && <script type="application/ld+json" is:inline set:html={JSON.stringify(jsonLd).replace(/</g, '\\u003c')} />}
+    <slot name="head" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="inner">
+        <a class="site-name" href="/">screens.guide</a>
+        <nav class="site-nav" aria-label="Site">
+          {nav.map(([href, label]) => (
+            <a href={href} aria-current={href === path ? 'page' : undefined}>{label}</a>
+          ))}
+        </nav>
+      </div>
+    </header>
+    <main>
+      <slot />
+    </main>
+    <footer class="site-footer">
+      <div class="inner">
+        <span>Measured by <a href="https://modaal.dev">Modaal</a></span>
+        <span>Dataset <a href="/changelog">{DATA.version}</a>, {DATA.updated}</span>
+        <a href="/privacy">Privacy</a>
+        <a href={REPOSITORY}>Source</a>
+        <span>Data <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>, code MIT</span>
+      </div>
+    </footer>
+    <script>
+      import { startAnalytics, trackDataLinks } from '../lib/analytics.ts'
+      trackDataLinks(document)
+      startAnalytics(location.hostname)
+    </script>
+  </body>
+</html>

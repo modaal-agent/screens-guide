@@ -1,0 +1,17 @@
+---
+// The comparison: outlines of the chosen devices' current readings, to scale. The island reads ?ids=.
+import DocPage from '../components/DocPage.astro'
+import Compare from '../islands/Compare.tsx'
+import { COMPARE_DEFAULT, DEVICES, headlineReading } from '../lib/data.ts'
+import { COMPARE_MAX, compareDoc } from '../lib/pages/compare.ts'
+
+const entries = DEVICES.map((d) => {
+  const r = headlineReading(d)
+  return { id: d.id, name: d.name, unit: d.unit, window: r.window, insets: r.safeAreaInsets, corners: r.cornerRadii.profile ?? r.cornerRadii.measured }
+})
+---
+<DocPage doc={compareDoc()}>
+  <Fragment slot="drawing">
+    <Compare client:visible entries={entries} defaults={COMPARE_DEFAULT} max={COMPARE_MAX} />
+  </Fragment>
+</DocPage>

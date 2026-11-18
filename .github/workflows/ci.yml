@@ -21,18 +21,54 @@ jobs:
         run: bash scripts/check-agent-rules.sh
 
   # ── Skills and specs lane ────────────────────────────────────────
-  # Every skill under skills/, the two plugin manifests, and every spec's
-  # references. bash, find, grep, awk, perl and python3, all on ubuntu-latest,
-  # so it needs no toolchain and reports in seconds.
+  # Every skill under skills/, the two plugin manifests, the eval cases, and
+  # every spec's references. bash, find, grep, awk, perl, python3 and git, all on
+  # ubuntu-latest, so it needs no toolchain and reports in seconds. S19 compares
+  # skills/ with the pull request's base or the push's previous commit, so the
+  # checkout carries the whole history.
   skills:
-    name: Skills, plugin manifests and spec references
+    name: Skills, plugin manifests, eval cases and spec references
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
-      - name: Skills, manifests and specs
+      - name: Skills, manifests, eval cases and specs
         run: scripts/check-skills.sh
+        env:
+          SKILLS_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
 
       - name: Each check red against a seeded violation
         run: scripts/check-skills.sh --self-test
+
+  # ── Site lane ────────────────────────────────────────────────────
+  # The dataset and the site's code: npm ci from the lockfile, the data checks of
+  # spec 001 §6, astro check, the build, then vitest, whose site tests read
+  # dist/. Node's version comes from .node-version.
+  site:
+    name: Dataset checks, build and tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - run: npm ci
+
+      - name: data/devices.json against its schema and rules
+        run: npm run check:data
+
+      - name: Type check
+        run: npm run check
+
+      - name: Build
+        run: npm run build
+
+      - name: Tests
+        run: npm test

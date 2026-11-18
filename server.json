@@ -1,0 +1,18 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.modaal-agent/screens-guide",
+  "title": "screens.guide",
+  "description": "Measured screen sizes, safe areas, corner radii and system bars of iOS and Android devices.",
+  "version": "1.0.0",
+  "websiteUrl": "https://screens.guide",
+  "repository": {
+    "url": "https://github.com/modaal-agent/screens-guide",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://screens.guide/mcp"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "name": "screens-guide",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "check": "astro check",
+    "check:data": "node scripts/check-data.ts",
+    "gen:skill": "node scripts/gen-skill.ts",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.12",
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "@types/node": "24.19.2",
+    "ajv": "8.20.0",
+    "typescript": "6.0.3",
+    "vitest": "5.1.0",
+    "wrangler": "4.159.0"
+  },
+  "dependencies": {
+    "@astrojs/preact": "6.1.2",
+    "astro": "7.4.8",
+    "posthog-js": "1.447.10",
+    "preact": "11.2.0"
+  }
+}

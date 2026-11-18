@@ -1,0 +1,26 @@
+---
+import DocPage from '../../components/DocPage.astro'
+import Legend from '../../components/Legend.astro'
+import Explorer from '../../islands/Explorer.tsx'
+import type { Device } from '../../lib/dataset.ts'
+import { DEVICES } from '../../lib/data.ts'
+import { deviceDoc } from '../../lib/pages/device.ts'
+
+export function getStaticPaths() {
+  return DEVICES.map((device) => ({ params: { id: device.id }, props: { device } }))
+}
+
+interface Props {
+  device: Device
+}
+
+const { device: d } = Astro.props
+const links = DEVICES.map(({ id, name, platform }) => ({ id, name, platform }))
+---
+<DocPage doc={deviceDoc(d)}>
+  <Fragment slot="drawings">
+    <h2>Explore the readings</h2>
+    <Explorer client:visible device={d} devices={links} />
+    <Legend />
+  </Fragment>
+</DocPage>

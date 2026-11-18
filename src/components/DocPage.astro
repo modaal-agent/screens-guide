@@ -1,0 +1,20 @@
+---
+// A page built from its Doc: the layout, the heading and the blocks. Each `slot` block is filled
+// from the named slot of the same name, e.g. <Fragment slot="drawings">…</Fragment>.
+import Base from '../layouts/Base.astro'
+import DocBlocks from './DocBlocks.astro'
+import type { Doc } from '../lib/doc.ts'
+
+interface Props {
+  doc: Doc
+  jsonLd?: object
+}
+
+const { doc, jsonLd } = Astro.props
+const slots: Record<string, string> = {}
+for (const b of doc.blocks) if (b.type === 'slot') slots[b.name] = await Astro.slots.render(b.name)
+---
+<Base title={doc.title} description={doc.description} jsonLd={jsonLd}>
+  <h1>{doc.h1}</h1>
+  <DocBlocks blocks={doc.blocks} slots={slots} />
+</Base>

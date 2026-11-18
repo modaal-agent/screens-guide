@@ -1,0 +1,334 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://screens.guide/data/v1/schema.json",
+  "title": "screens.guide devices",
+  "description": "Measured screen sizes, safe-area insets, corner radii, system bars, margins and folds of iOS and Android devices, one reading per device, runtime build, screen and rotation. A value no run measured is null, and the reading's `missing` gives the reason.",
+  "type": "object",
+  "required": ["version", "updated", "license", "units", "runs", "devices"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "description": "The dataset's semantic version. A major version changes this schema incompatibly and gets a new data path (/data/v2/).",
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "updated": { "description": "The export's date.", "$ref": "#/$defs/date" },
+    "license": { "const": "CC-BY-4.0" },
+    "units": {
+      "description": "What each unit means.",
+      "type": "object",
+      "required": ["pt", "dp", "px"],
+      "additionalProperties": false,
+      "properties": {
+        "pt": { "type": "string" },
+        "dp": { "type": "string" },
+        "px": { "type": "string" }
+      }
+    },
+    "runs": {
+      "description": "The measurement runs, by id. A reading's `measured.runs` names the runs its values come from.",
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+      "additionalProperties": {
+        "type": "object",
+        "required": ["date", "on", "what"],
+        "additionalProperties": false,
+        "properties": {
+          "date": { "$ref": "#/$defs/date" },
+          "on": { "enum": ["simulator", "emulator"] },
+          "what": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "devices": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/device" }
+    }
+  },
+  "$defs": {
+    "date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+    "length": { "type": "number", "minimum": 0 },
+    "size": {
+      "type": "object",
+      "required": ["width", "height"],
+      "additionalProperties": false,
+      "properties": {
+        "width": { "type": "number", "exclusiveMinimum": 0 },
+        "height": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "pixels": {
+      "type": "object",
+      "required": ["width", "height"],
+      "additionalProperties": false,
+      "properties": {
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "rect": {
+      "description": "A frame in the reading's window coordinates: origin at the window's top left, in the device's unit.",
+      "type": "object",
+      "required": ["x", "y", "width", "height"],
+      "additionalProperties": false,
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "width": { "$ref": "#/$defs/length" },
+        "height": { "$ref": "#/$defs/length" }
+      }
+    },
+    "insets": {
+      "type": "object",
+      "required": ["top", "bottom", "left", "right"],
+      "additionalProperties": false,
+      "properties": {
+        "top": { "$ref": "#/$defs/length" },
+        "bottom": { "$ref": "#/$defs/length" },
+        "left": { "$ref": "#/$defs/length" },
+        "right": { "$ref": "#/$defs/length" }
+      }
+    },
+    "corners": {
+      "description": "Corner radii for the reading's orientation, with where they come from.",
+      "type": "object",
+      "required": ["topLeft", "topRight", "bottomRight", "bottomLeft", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "topLeft": { "$ref": "#/$defs/length" },
+        "topRight": { "$ref": "#/$defs/length" },
+        "bottomRight": { "$ref": "#/$defs/length" },
+        "bottomLeft": { "$ref": "#/$defs/length" },
+        "source": { "type": "string", "minLength": 1 }
+      }
+    },
+    "sizeClass": {
+      "description": "UIKit's size classes on iOS; on Android the window size classes, V1 in `sizeClass` and V2 in `sizeClassV2`.",
+      "type": ["object", "null"],
+      "required": ["width", "height"],
+      "additionalProperties": false,
+      "properties": {
+        "width": { "enum": ["compact", "regular", "medium", "expanded", "large", "extra-large"] },
+        "height": { "enum": ["compact", "regular", "medium", "expanded"] }
+      }
+    },
+    "bar": {
+      "description": "A bar's top edge and height in window coordinates.",
+      "type": ["object", "null"],
+      "required": ["top", "height"],
+      "additionalProperties": false,
+      "properties": {
+        "top": { "type": "number" },
+        "height": { "$ref": "#/$defs/length" }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "required": ["os", "version", "build", "prerelease"],
+      "additionalProperties": false,
+      "properties": {
+        "os": { "enum": ["iOS", "Android"] },
+        "version": { "type": "string", "pattern": "^\\d+(\\.\\d+)*$" },
+        "api": { "description": "Android's API level.", "type": "integer" },
+        "build": { "type": "string", "minLength": 1 },
+        "prerelease": { "description": "A pre-release build; never a device's `current`.", "type": "boolean" }
+      }
+    },
+    "display": {
+      "type": "object",
+      "required": ["width", "height", "pixels", "cutout"],
+      "additionalProperties": false,
+      "properties": {
+        "width": { "description": "In the device's unit, in the display's natural orientation.", "type": "number", "exclusiveMinimum": 0 },
+        "height": { "type": "number", "exclusiveMinimum": 0 },
+        "pixels": { "$ref": "#/$defs/pixels" },
+        "scale": { "description": "iOS: pixels per point.", "type": "number", "exclusiveMinimum": 0 },
+        "density": { "description": "Android: dots per inch; dp = px × 160 ÷ density.", "type": "integer", "minimum": 1 },
+        "cutout": {
+          "description": "The cutout's kind, where a run recorded it: none, notch, island (Dynamic Island), strip (the iPhone Duo's camera strip), hole (a hole punch).",
+          "enum": ["none", "notch", "island", "strip", "hole", null]
+        }
+      }
+    },
+    "reading": {
+      "type": "object",
+      "required": [
+        "runtime", "measured", "screen", "orientation", "rotation", "window", "pixels", "safeAreaInsets",
+        "cornerRadii", "sizeClass", "statusBar", "navigationBar", "tabBar", "contentMargin", "regions", "fold", "missing"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "runtime": { "$ref": "#/$defs/runtime" },
+        "measured": {
+          "type": "object",
+          "required": ["on", "date", "runs"],
+          "additionalProperties": false,
+          "properties": {
+            "on": { "enum": ["simulator", "emulator"] },
+            "date": { "description": "The newest date of the runs the reading's values come from.", "$ref": "#/$defs/date" },
+            "runs": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string" } }
+          }
+        },
+        "screen": { "description": "`main`, or a foldable's pose: closed, open, half-open, tent.", "enum": ["main", "closed", "open", "half-open", "tent"] },
+        "orientation": { "description": "The window's shape.", "enum": ["portrait", "landscape"] },
+        "rotation": {
+          "description": "Degrees from the display's natural orientation (iOS: UIKit's portrait). At 90 the device's top edge is on the window's left: UIKit's landscapeRight, Android's ROTATION_90.",
+          "enum": [0, 90, 180, 270]
+        },
+        "window": { "$ref": "#/$defs/size" },
+        "pixels": { "$ref": "#/$defs/pixels" },
+        "safeAreaInsets": {
+          "description": "iOS: the window's safeAreaInsets. Android: WindowInsets.safeDrawing, the larger of the system bars and the display cutout per side.",
+          "oneOf": [{ "$ref": "#/$defs/insets" }, { "type": "null" }]
+        },
+        "systemBarInsets": { "description": "Android: WindowInsets.systemBars.", "oneOf": [{ "$ref": "#/$defs/insets" }, { "type": "null" }] },
+        "cutoutInsets": { "description": "Android: WindowInsets.displayCutout.", "oneOf": [{ "$ref": "#/$defs/insets" }, { "type": "null" }] },
+        "cornerRadii": {
+          "type": "object",
+          "required": ["profile", "measured"],
+          "additionalProperties": false,
+          "properties": {
+            "profile": {
+              "description": "The display's corners from the simulator's device profile (iOS) or the emulator's display configuration (Android).",
+              "oneOf": [{ "$ref": "#/$defs/corners" }, { "type": "null" }]
+            },
+            "measured": {
+              "description": "SwiftUI's concentricCornerRadii for a view that fills the window; on iOS 18.6, the corners of the view behind a full-screen sheet.",
+              "oneOf": [{ "$ref": "#/$defs/corners" }, { "type": "null" }]
+            }
+          }
+        },
+        "sizeClass": { "$ref": "#/$defs/sizeClass" },
+        "sizeClassV2": { "$ref": "#/$defs/sizeClass" },
+        "statusBar": {
+          "type": ["object", "null"],
+          "required": ["placement", "frame"],
+          "additionalProperties": false,
+          "properties": {
+            "placement": {
+              "description": "top; hidden; left or right (a column in a side inset); navigation-bar (the time in the navigation bar's row).",
+              "enum": ["top", "hidden", "left", "right", "navigation-bar"]
+            },
+            "frame": { "oneOf": [{ "$ref": "#/$defs/rect" }, { "type": "null" }] }
+          }
+        },
+        "navigationBar": {
+          "description": "iOS: UINavigationBar with an inline title and with a large title. Android: Material 3's TopAppBar inside the safe area as `inline`.",
+          "type": "object",
+          "required": ["inline", "large"],
+          "additionalProperties": false,
+          "properties": {
+            "inline": { "$ref": "#/$defs/bar" },
+            "large": { "$ref": "#/$defs/bar" }
+          }
+        },
+        "tabBar": {
+          "type": ["object", "null"],
+          "required": ["style", "frame", "bottom", "height", "sideGap"],
+          "additionalProperties": false,
+          "properties": {
+            "style": {
+              "description": "capsule (iOS 26 and later), bar (iOS 18, Android's NavigationBar), column (the iPhone Duo, in a side inset).",
+              "enum": ["capsule", "bar", "column"]
+            },
+            "frame": { "description": "With three tabs.", "$ref": "#/$defs/rect" },
+            "bottom": { "description": "The gap from the frame's bottom to the window's bottom edge.", "type": "number" },
+            "height": { "$ref": "#/$defs/length" },
+            "sideGap": {
+              "description": "The smallest gap to a side edge with five tabs with long titles (iOS); the frame's gap on Android.",
+              "type": ["number", "null"]
+            }
+          }
+        },
+        "contentMargin": {
+          "description": "SwiftUI's contentMargins(for: .container) on the sides of a view that spans the window.",
+          "type": ["number", "null"],
+          "minimum": 0
+        },
+        "regions": {
+          "description": "Occlusion regions UIKit reports, and Android's display cutout.",
+          "type": ["array", "null"],
+          "items": {
+            "type": "object",
+            "required": ["kind", "frame", "active"],
+            "additionalProperties": false,
+            "properties": {
+              "kind": { "enum": ["occlusion", "cutout"] },
+              "frame": { "$ref": "#/$defs/rect" },
+              "active": { "type": "boolean" }
+            }
+          }
+        },
+        "fold": {
+          "description": "The hinge across the screen: its axis, its frame (a band on iOS, a line on Android), the margins either side (iOS) and whether it separates the window.",
+          "type": ["object", "null"],
+          "required": ["axis", "frame", "margin", "separates"],
+          "additionalProperties": false,
+          "properties": {
+            "axis": { "enum": ["vertical", "horizontal"] },
+            "frame": { "$ref": "#/$defs/rect" },
+            "margin": { "type": ["number", "null"], "minimum": 0 },
+            "separates": { "type": "boolean" }
+          }
+        },
+        "missing": {
+          "description": "The reason per field path that is null: not read on this device, runtime, pose or orientation, or why the platform has no such value.",
+          "type": "object",
+          "propertyNames": { "pattern": "^[a-zA-Z][a-zA-Z0-9]*(\\.[a-zA-Z][a-zA-Z0-9]*)?$" },
+          "additionalProperties": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "device": {
+      "type": "object",
+      "required": ["id", "name", "platform", "kind", "unit", "displays", "current", "readings"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+        "name": { "type": "string", "minLength": 1 },
+        "platform": { "enum": ["ios", "android"] },
+        "kind": { "enum": ["phone", "tablet", "foldable"] },
+        "unit": { "enum": ["pt", "dp"] },
+        "displays": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "enum": ["main", "cover", "inner"] },
+          "additionalProperties": { "$ref": "#/$defs/display" }
+        },
+        "screens": {
+          "description": "A foldable's poses and the display each one shows.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["id", "display"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "enum": ["closed", "open", "half-open", "tent"] },
+              "display": { "enum": ["cover", "inner"] }
+            }
+          }
+        },
+        "current": {
+          "description": "The reading set a page shows first: the newest runtime that is not a pre-release and has a reading in each screen and rotation the device has.",
+          "type": "object",
+          "required": ["version", "build"],
+          "additionalProperties": false,
+          "properties": {
+            "version": { "type": "string" },
+            "build": { "type": "string" }
+          }
+        },
+        "readings": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/reading" } }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "platform": { "const": "ios" } } },
+          "then": { "properties": { "unit": { "const": "pt" } } },
+          "else": { "properties": { "unit": { "const": "dp" } } }
+        }
+      ]
+    }
+  }
+}
