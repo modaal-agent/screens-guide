@@ -1,7 +1,9 @@
 # 001 — The site and the dataset
 
 **Status:** Written 2026-11-17, revised in place the same day with the answers to §10.1 to §10.8.
-Phase 3 implemented (§7.1). **Baseline:** `main` at `77f08eb`, the repository files.
+Phases 1 to 6 and phase 7's code implemented (§7.1), merged into `main` as `9a0db6b` on
+2026-11-18; the deploy workflow published the site that day (run 44375511902). Phase 7's user
+steps and live checks are open. **Baseline:** `main` at `77f08eb`, the repository files.
 **Obsoletes:** nothing.
 
 **Relates to:**
@@ -674,7 +676,7 @@ PostHog and its project on 2026-11-17. This spec chooses how the pages use it:
 
 - Physical size, weight, PPI and diagonal. No run measured them, and spec sheets publish them.
 - Apple Watch, Apple TV, Vision Pro, CarPlay and Android Auto.
-- Android devices other than Google's emulator profiles. Spec 003 may add some.
+- Android devices other than Google's emulator profiles (spec 003 §7 and spec 003 §8.3).
 - Accounts, comments and translations.
 
 ---

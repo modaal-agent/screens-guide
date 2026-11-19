@@ -1,8 +1,10 @@
 # 002 — Agent interfaces: an MCP server, Markdown by content negotiation, and a skill
 
 **Status:** Written 2026-11-17, revised in place the same day with spec 001's answers on the domain
-and analytics (spec 001 §10.3 and spec 001 §10.6) and the answers to §9.1 to §9.4. Not
-implemented. **Baseline:** `main` at `77f08eb`. **Obsoletes:** nothing.
+and analytics (spec 001 §10.3 and spec 001 §10.6) and the answers to §9.1 to §9.4. Phase 1 and
+the code of phases 2 to 5 implemented (§6.1), merged into `main` as `9a0db6b` on 2026-11-18.
+Phase 4's first eval round and phase 5's live checks, Workers logs, first registry publish and user
+steps are open. **Baseline:** `main` at `77f08eb`. **Obsoletes:** nothing.
 
 **Relates to:**
 
