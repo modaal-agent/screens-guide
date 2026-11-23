@@ -195,8 +195,8 @@ const getDevice: Tool = {
   title: "Get a device's readings",
   description: "Returns a device's measured readings: window, pixels, safe-area insets, corner radii, size classes, the status bar, the app's top bar (navigationBar: UINavigationBar, or Material 3's TopAppBar), the bottom tab bar (tabBar: UITabBar, or Material 3's NavigationBar), content margin, reserved regions and fold, one reading per screen and rotation. Gives the current runtime's readings unless a runtime is named; narrow them by screen, orientation or rotation, which must agree when both are given (rotation 90 on a phone is landscape). A null value has its reason in the reading's `missing`, keyed by the field's dotted path, such as cornerRadii.measured.",
   inputSchema: {
-    type: 'object', additionalProperties: false, required: ['id'],
-    properties: { id: DEVICE_ID, screen: SCREEN, orientation: ORIENTATION, rotation: ROTATION, runtime: RUNTIME },
+    type: 'object', additionalProperties: false, required: ['device'],
+    properties: { device: DEVICE_ID, screen: SCREEN, orientation: ORIENTATION, rotation: ROTATION, runtime: RUNTIME },
   },
   outputSchema: withDefs({
     type: 'object',
@@ -219,7 +219,7 @@ const getDevice: Tool = {
   }),
   annotations: ANNOTATIONS,
   run(args) {
-    const d = findDevice(args.id as string)
+    const d = findDevice(args.device as string)
     const build = pickBuild(d, args.runtime as string | undefined)
     if (args.screen && !screensOf(d).includes(args.screen as string)) pickReading(d, build, args.screen as string)
     const readings = d.readings.filter((r) =>
@@ -248,9 +248,9 @@ const compareDevices: Tool = {
   title: 'Compare devices',
   description: "Compares 2 to 8 different devices side by side, one row per device and screen: window size, pixels, pixels per unit, safe-area insets, the safe area's rectangle and corner radii. Uses each device's current runtime and its reading at rotation 0 unless an orientation or runtime is named. At rotation 0 a foldable's open screen can be landscape, as the Pixel Fold's open and half-open screens are; name an orientation to compare like with like.",
   inputSchema: {
-    type: 'object', additionalProperties: false, required: ['ids'],
+    type: 'object', additionalProperties: false, required: ['devices'],
     properties: {
-      ids: { type: 'array', minItems: 2, maxItems: 8, uniqueItems: true, items: DEVICE_ID },
+      devices: { type: 'array', minItems: 2, maxItems: 8, uniqueItems: true, items: DEVICE_ID },
       orientation: ORIENTATION,
       runtime: RUNTIME,
     },
@@ -282,8 +282,7 @@ const compareDevices: Tool = {
   }),
   annotations: ANNOTATIONS,
   run(args) {
-    const ids = args.ids as string[]
-    const devices = ids.map(findDevice)
+    const devices = (args.devices as string[]).map(findDevice)
     const rows: Record<string, unknown>[] = []
     const missing: { id: string; reason: string }[] = []
     for (const d of devices) {
@@ -322,7 +321,7 @@ const FINDING: Schema = {
   type: 'object',
   required: ['type'],
   properties: {
-    type: { type: 'string', enum: ['outside-window', 'in-inset', 'cut-by-corner', 'near-corner', 'under-system-bar', 'crosses-fold', 'in-occlusion-region'] },
+    type: { type: 'string', enum: ['outside-window', 'in-inset', 'cut-by-corner', 'near-corner', 'under-bar', 'crosses-fold', 'in-occlusion-region'] },
     overhang: EDGES,
     edge: { type: 'string', enum: ['top', 'bottom', 'left', 'right'] },
     corner: { type: 'string', enum: ['topLeft', 'topRight', 'bottomRight', 'bottomLeft'] },
@@ -330,8 +329,8 @@ const FINDING: Schema = {
     gap: { type: 'number', description: "The frame corner's distance inside the display's curve." },
     concentricRadius: { type: 'number', description: "The corner radius that keeps an even gap to the display's corner: its radius minus the frame's larger distance from the two edges, at most half the frame's shorter side." },
     bar: {
-      type: 'string', enum: ['status', 'navigation', 'tab'],
-      description: "status: the system status bar. navigation: the app's top bar, UINavigationBar with an inline title or Material 3's TopAppBar. tab: the app's bottom tab bar, UITabBar or Material 3's NavigationBar.",
+      type: 'string', enum: ['status', 'top', 'bottom'],
+      description: "status: the system status bar. top: the app's top bar, UINavigationBar with an inline title or Material 3's TopAppBar, get_device's navigationBar. bottom: the app's bottom bar, UITabBar or Material 3's NavigationBar, get_device's tabBar.",
     },
     axis: { type: 'string', enum: ['vertical', 'horizontal'] },
     separates: { type: 'boolean' },
@@ -365,12 +364,12 @@ export function findings(r: Reading, f: Rect & { cornerRadius?: number }): Findi
   }
   const bars: [string, Rect | null][] = [
     ['status', r.statusBar?.frame ?? null],
-    ['navigation', r.navigationBar.inline ? { x: 0, y: r.navigationBar.inline.top, width: w.width, height: r.navigationBar.inline.height } : null],
-    ['tab', r.tabBar?.frame ?? null],
+    ['top', r.navigationBar.inline ? { x: 0, y: r.navigationBar.inline.top, width: w.width, height: r.navigationBar.inline.height } : null],
+    ['bottom', r.tabBar?.frame ?? null],
   ]
   for (const [bar, rect] of bars) {
     const o = rect && intersection(f, rect)
-    if (o) out.push({ type: 'under-system-bar', bar, depth: round2(Math.min(o.width, o.height)), overlap: { width: round2(o.width), height: round2(o.height) } })
+    if (o) out.push({ type: 'under-bar', bar, depth: round2(Math.min(o.width, o.height)), overlap: { width: round2(o.width), height: round2(o.height) } })
   }
   if (r.fold && crossesFold(f, r.fold.frame)) out.push({ type: 'crosses-fold', axis: r.fold.axis, separates: r.fold.separates })
   for (const g of r.regions ?? []) {
@@ -387,7 +386,7 @@ function map<T extends object>(o: T, fn: (v: number) => number): T {
 const checkLayout: Tool = {
   name: 'check_layout',
   title: 'Check a layout against a device',
-  description: `Checks up to ${MAX_FRAMES} frames of a screen's layout against a device's measured window: whether each frame reaches outside the window, into a safe-area inset, past the display's rounded corner, under the status bar or the app's top or bottom tab bar, across a foldable's fold, or into a reserved region such as a camera. Each finding gives its numbers; a frame near a rounded corner gets the concentric radius. Frames are in the device's unit, in window coordinates from the top left. Without screen, a foldable is checked on its first screen, closed (the cover display). Orientation and rotation must agree when both are given. The request body is at most ${MAX_BODY / 1024} KiB, so keep frame names short.`,
+  description: `Checks up to ${MAX_FRAMES} frames of a screen's layout against a device's measured window: whether each frame reaches outside the window, into a safe-area inset, past the display's rounded corner, under the status bar or the app's top or bottom bar, across a foldable's fold, or into a reserved region such as a camera. Each finding gives its numbers; a frame near a rounded corner gets the concentric radius. Frames are in the device's unit, in window coordinates from the top left. Without screen, a foldable is checked on its first screen, closed (the cover display). Orientation and rotation must agree when both are given. The request body is at most ${MAX_BODY / 1024} KiB, so keep frame names short.`,
   inputSchema: {
     type: 'object', additionalProperties: false, required: ['device', 'frames'],
     properties: {
@@ -494,7 +493,7 @@ export const TOOLS: Tool[] = [listDevices, getDevice, compareDevices, checkLayou
 /** The tool's arguments named in its usage event: device ids, screen, orientation, runtime and the frame count. */
 export function toolEventProperties(name: string, args: Record<string, unknown>): Record<string, unknown> {
   const p: Record<string, unknown> = { tool: name }
-  const ids = [args.id, args.device, ...(Array.isArray(args.ids) ? args.ids : [])].filter((x) => typeof x === 'string' && DEVICES.some((d) => d.id === x))
+  const ids = [args.device, ...(Array.isArray(args.devices) ? args.devices : [])].filter((x) => typeof x === 'string' && DEVICES.some((d) => d.id === x))
   if (ids.length) p.devices = ids
   // Only values the schema or the dataset knows: no text a client made up reaches an event.
   const known: Record<string, unknown[]> = {

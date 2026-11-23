@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import worker from '../worker/index.ts'
 import { MAX_BODY, SUPPORTED_VERSIONS } from '../worker/mcp.ts'
 import { DailyCount, checkRateLimit } from '../worker/ratelimit.ts'
-import { MAX_MAGNITUDE, TOOLS } from '../worker/tools.ts'
+import { MAX_MAGNITUDE, TOOLS, toolEventProperties } from '../worker/tools.ts'
 import { LIVE_CASES, matches } from './support/mcp-cases.ts'
 import { call, post, stubEnv } from './support/worker.ts'
 
@@ -137,33 +137,33 @@ describe('the tools', () => {
   })
 
   it("gets a device's current readings, or a runtime's, narrowed by screen and orientation", async () => {
-    const cur = await ok('get_device', { id: 'iphone-17' })
+    const cur = await ok('get_device', { device: 'iphone-17' })
     expect(cur.runtime.build).toBe('24A434')
     expect(cur.readings.every((r: { runtime: { build: string } }) => r.runtime.build === '24A434')).toBe(true)
-    const v272 = await ok('get_device', { id: 'iphone-17', runtime: '27.2', orientation: 'portrait' })
+    const v272 = await ok('get_device', { device: 'iphone-17', runtime: '27.2', orientation: 'portrait' })
     expect(v272.runtime.build).toBe('24B8117')
     expect(v272.readings.map((r: { orientation: string }) => r.orientation)).toEqual(['portrait'])
-    const open = await ok('get_device', { id: 'pixel-fold', screen: 'open', rotation: 90 })
+    const open = await ok('get_device', { device: 'pixel-fold', screen: 'open', rotation: 90 })
     expect(open.readings).toHaveLength(1)
     expect(open.readings[0]).toMatchObject({ screen: 'open', rotation: 90 })
   })
 
   it('names the valid ids, runtimes and screens when an argument names none', async () => {
-    const unknown = await tool('get_device', { id: 'iphone-99' })
+    const unknown = await tool('get_device', { device: 'iphone-99' })
     expect(unknown.isError).toBe(true)
     expect(unknown.content[0].text).toContain('iphone-17')
-    expect((await tool('get_device', { id: 'iphone-17', runtime: '9.9' })).content[0].text).toContain('24A434')
-    expect((await tool('get_device', { id: 'iphone-17', screen: 'open' })).content[0].text).toContain('Its screens: main')
+    expect((await tool('get_device', { device: 'iphone-17', runtime: '9.9' })).content[0].text).toContain('24A434')
+    expect((await tool('get_device', { device: 'iphone-17', screen: 'open' })).content[0].text).toContain('Its screens: main')
     const bad = await tool('check_layout', { device: 'iphone-17', frames: [{ name: 'a', x: 0, y: 0, width: -1, height: 1 }], extra: 1 })
     expect(bad.isError).toBe(true)
     expect(bad.content[0].text).toMatch(/width must be at least 0.*extra is not an argument/)
   })
 
   it('compares devices, and lists the ones with no reading for the runtime asked', async () => {
-    const c = await ok('compare_devices', { ids: ['iphone-17', 'pixel-8'] })
+    const c = await ok('compare_devices', { devices: ['iphone-17', 'pixel-8'] })
     expect(c.rows.map((r: { id: string }) => r.id)).toEqual(['iphone-17', 'pixel-8'])
     expect(c.rows[0]).toMatchObject({ safeArea: { x: 0, y: 62, width: 402, height: 778 }, pixelsPerUnit: 3 })
-    const v = await ok('compare_devices', { ids: ['iphone-17', 'pixel-8'], runtime: '27.2' })
+    const v = await ok('compare_devices', { devices: ['iphone-17', 'pixel-8'], runtime: '27.2' })
     expect(v.rows.map((r: { id: string }) => r.id)).toEqual(['iphone-17'])
     expect(v.missing[0].id).toBe('pixel-8')
   })
@@ -188,11 +188,11 @@ describe('the tools', () => {
     const ios = await ok('check_layout', { device: 'iphone-17', frames: [{ name: 'header', x: -4, y: 0, width: 410, height: 100 }] })
     const f = ios.frames[0].findings
     expect(f).toContainEqual({ type: 'outside-window', overhang: { top: 0, bottom: 0, left: 4, right: 4 } })
-    expect(f).toContainEqual(expect.objectContaining({ type: 'under-system-bar', bar: 'status' }))
-    expect(f).toContainEqual(expect.objectContaining({ type: 'under-system-bar', bar: 'navigation' }))
+    expect(f).toContainEqual(expect.objectContaining({ type: 'under-bar', bar: 'status' }))
+    expect(f).toContainEqual(expect.objectContaining({ type: 'under-bar', bar: 'top' }))
     const fold = await ok('check_layout', { device: 'pixel-fold', screen: 'half-open', frames: [{ name: 'list', x: 0, y: 100, width: 841, height: 400 }] })
     expect(fold.frames[0].findings).toContainEqual({ type: 'crosses-fold', axis: 'vertical', separates: true })
-    const duo = await ok('get_device', { id: 'iphone-duo', screen: 'open' })
+    const duo = await ok('get_device', { device: 'iphone-duo', screen: 'open' })
     const region = duo.readings.find((r: { regions: unknown[] | null }) => r.regions?.length)
     const g = region.regions[0].frame
     const hit = await ok('check_layout', {
@@ -217,29 +217,29 @@ describe('the tools', () => {
   // The defects of the live test of 2026-11-23 (spec 002 §5.1), one test per decision.
   it('refuses an orientation and a rotation that disagree, naming the rotation (D13)', async () => {
     for (const [name, args] of [
-      ['get_device', { id: 'iphone-17', orientation: 'portrait', rotation: 90 }],
+      ['get_device', { device: 'iphone-17', orientation: 'portrait', rotation: 90 }],
       ['check_layout', { device: 'iphone-17', orientation: 'portrait', rotation: 90, frames: [{ name: 'a', x: 0, y: 0, width: 1, height: 1 }] }],
     ] as const) {
       const r = await tool(name, args)
       expect(r.isError, name).toBe(true)
       expect(r.content[0].text).toBe("Rotation 90 gives the iPhone 17's main screen a landscape window, not portrait. Give orientation or rotation, or a pair that agrees.")
     }
-    const fold = await tool('get_device', { id: 'pixel-fold', screen: 'open', orientation: 'portrait', rotation: 0 })
+    const fold = await tool('get_device', { device: 'pixel-fold', screen: 'open', orientation: 'portrait', rotation: 0 })
     expect(fold.content[0].text).toMatch(/^Rotation 0 gives the Pixel Fold's open screen a landscape window, not portrait/)
-    expect((await ok('get_device', { id: 'iphone-17', orientation: 'landscape', rotation: 90 })).readings).toHaveLength(1)
+    expect((await ok('get_device', { device: 'iphone-17', orientation: 'landscape', rotation: 90 })).readings).toHaveLength(1)
   })
 
   it("names a version's build by the device's current build when the version is current (D14)", async () => {
-    const duo = await ok('get_device', { id: 'iphone-duo', runtime: '27.1' })
-    const current = await ok('get_device', { id: 'iphone-duo' })
+    const duo = await ok('get_device', { device: 'iphone-duo', runtime: '27.1' })
+    const current = await ok('get_device', { device: 'iphone-duo' })
     expect(duo.runtime.build).toBe('24A94232')
     expect(duo.readings).toEqual(current.readings)
-    expect((await ok('get_device', { id: 'iphone-duo', runtime: '24A94425' })).runtime.build).toBe('24A94425')
+    expect((await ok('get_device', { device: 'iphone-duo', runtime: '24A94425' })).runtime.build).toBe('24A94425')
   })
 
   it('gives pixels per unit unrounded, and refuses a length beyond ±1,000,000 (D15)', async () => {
     expect((await ok('convert_units', { device: 'pixel-8', values: [1], from: 'dp', to: 'px' })).pixelsPerUnit).toBe(2.625)
-    const rows = (await ok('compare_devices', { ids: ['pixel-8', 'pixel-9-pro-fold'] })).rows
+    const rows = (await ok('compare_devices', { devices: ['pixel-8', 'pixel-9-pro-fold'] })).rows
     expect(rows.map((r: { pixelsPerUnit: number }) => r.pixelsPerUnit)).toEqual([2.625, 2.4375, 2.4375, 2.4375])
     expect((await ok('convert_units', { device: 'pixel-8', values: [MAX_MAGNITUDE, -MAX_MAGNITUDE], from: 'dp', to: 'px' })).values[0]).toEqual({ value: 1e6, result: 2625000, roundToPx: 2625000 })
     const big = await tool('convert_units', { device: 'pixel-8', values: [1e39], from: 'dp', to: 'px' })
@@ -249,9 +249,9 @@ describe('the tools', () => {
   })
 
   it('refuses a device named twice in compare_devices (D16)', async () => {
-    const r = await tool('compare_devices', { ids: ['iphone-17', 'pixel-8', 'iphone-17'] })
+    const r = await tool('compare_devices', { devices: ['iphone-17', 'pixel-8', 'iphone-17'] })
     expect(r.isError).toBe(true)
-    expect(r.content[0].text).toContain('arguments.ids must not repeat an item: "iphone-17" appears more than once')
+    expect(r.content[0].text).toContain('arguments.devices must not repeat an item: "iphone-17" appears more than once')
   })
 
   it("caps the concentric radius at half the frame's shorter side and at the display's radius (D17)", async () => {
@@ -264,8 +264,8 @@ describe('the tools', () => {
   })
 
   it('names the keys a tool or a frame takes when given another, and counts in the singular for one', async () => {
-    expect((await tool('get_device', { device: 'iphone-17' })).content[0].text)
-      .toBe('Invalid arguments for get_device: arguments.id is required; arguments.device is not an argument of this tool; its arguments are id, screen, orientation, rotation, runtime.')
+    expect((await tool('get_device', { id: 'iphone-17' })).content[0].text)
+      .toBe('Invalid arguments for get_device: arguments.device is required; arguments.id is not an argument of this tool; its arguments are device, screen, orientation, rotation, runtime.')
     expect((await tool('check_layout', { device: 'iphone-17', frames: [{ name: 'a', x: 0, y: 0, w: 1, height: 1 }] })).content[0].text)
       .toContain('arguments.frames[0].w is not a key of arguments.frames[0]; its keys are name, x, y, width, height, cornerRadius')
     expect((await tool('convert_units', { device: 'pixel-8', values: [], from: 'dp', to: 'px' })).content[0].text)
@@ -361,7 +361,7 @@ describe('the usage events', () => {
   it('sends one mcp_request per message for screens.guide, and none for localhost', async () => {
     const fetcher = capture(async () => new Response('{}'))
     const { env, ctx, waits } = stubEnv()
-    await worker.fetch(post([{ jsonrpc: '2.0', id: 1, method: 'ping' }, call(2, 'get_device', { id: 'iphone-17', runtime: 'secret build' })], {}, 'https://screens.guide'), env, ctx)
+    await worker.fetch(post([{ jsonrpc: '2.0', id: 1, method: 'ping' }, call(2, 'get_device', { device: 'iphone-17', runtime: 'secret build' })], {}, 'https://screens.guide'), env, ctx)
     await Promise.all(waits)
     expect(fetcher).toHaveBeenCalledTimes(2)
     const bodies = fetcher.mock.calls.map((_, i) => JSON.parse(sent(fetcher, i)))
@@ -374,6 +374,12 @@ describe('the usage events', () => {
     await Promise.all(waits)
     expect(fetcher).not.toHaveBeenCalled()
     vi.unstubAllGlobals()
+  })
+
+  it("names the known device ids of `device` and `devices`, and drops the old names' values", () => {
+    expect(toolEventProperties('compare_devices', { devices: ['iphone-17', 'nope', 'pixel-8'] }).devices).toEqual(['iphone-17', 'pixel-8'])
+    expect(toolEventProperties('check_layout', { device: 'pixel-8', frames: [] })).toMatchObject({ devices: ['pixel-8'], frames: 0 })
+    expect(toolEventProperties('get_device', { id: 'iphone-17' }).devices).toBeUndefined()
   })
 
   it('carries no check_layout frame and no client address', async () => {

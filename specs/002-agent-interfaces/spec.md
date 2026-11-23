@@ -6,7 +6,8 @@ the code of phases 2 to 5 implemented (§6.1), merged into `main` as `9a0db6b` o
 On 2026-11-23, `c56f201` turned on Workers Logs, and the tag `mcp-v1.0.0` published `server.json`
 1.0.0 to the MCP Registry. The same day, a live test of every tool found seven defects (§5.1).
 Phase 6 fixed them under D13 to D18, and the tag `mcp-v1.1.0` published `server.json` 1.1.0
-the same day. Phase 4's first eval round
+the same day. Phase 7 renames the device arguments and the bar finding under D19, which replaces
+D18, and raises `server.json` to 1.2.0. Phase 4's first eval round
 and phase 5's other live checks and user steps are open. **Baseline:** `main` at `77f08eb`.
 **Obsoletes:** nothing.
 
@@ -248,8 +249,8 @@ text only. Each carries the annotations `readOnlyHint: true`, `idempotentHint: t
 | tool | input | output |
 | --- | --- | --- |
 | `list_devices` | `platform` (`ios`, `android`), `kind` (`phone`, `tablet`, `foldable`); both optional | one row per device: id, name, platform, kind, unit, each screen's id and portrait window size, the runtimes it has readings on, and its `current` runtime |
-| `get_device` | `id`; `screen`, `orientation`, `rotation` and `runtime`, optional | the device's readings from spec 001 §2.2: the `current` set, or the runtime given, narrowed to the screen, orientation and rotation when given |
-| `compare_devices` | `ids`, 2–8 different device ids; `orientation` and `runtime`, optional | one row per device and screen, from each device's `current` readings unless `runtime` is given: window size, pixels, pixels per unit (unrounded, D15), safe-area insets, the safe area's rectangle, corner radii |
+| `get_device` | `device`; `screen`, `orientation`, `rotation` and `runtime`, optional | the device's readings from spec 001 §2.2: the `current` set, or the runtime given, narrowed to the screen, orientation and rotation when given |
+| `compare_devices` | `devices`, 2–8 different device ids; `orientation` and `runtime`, optional | one row per device and screen, from each device's `current` readings unless `runtime` is given: window size, pixels, pixels per unit (unrounded, D15), safe-area insets, the safe area's rectangle, corner radii |
 | `check_layout` | `device`, `screen`, `runtime` (both optional), `orientation`, and `frames`: a list of `{ name, x, y, width, height, cornerRadius? }` | per frame, the findings of §2.3 with their numbers, and the concentric radius for a frame near a rounded corner |
 | `convert_units` | `device`, `values`, `from` and `to`, each `pt`, `dp` or `px` | the converted values, and for Android the pixel value Compose's `Dp.roundToPx()` gives (rounded to the nearest pixel) |
 
@@ -257,8 +258,8 @@ text only. Each carries the annotations `readOnlyHint: true`, `idempotentHint: t
   current one, and the version's newest release build otherwise (D14).
 - An `orientation` and a `rotation` that disagree get an error naming the rotation's orientation
   (D13).
-- The device argument keeps its three names, `id`, `ids` and `device`. The server's `instructions`
-  name them, and an unknown argument's error lists the tool's arguments (D18).
+- Every tool that takes one device names it `device`, and `compare_devices` takes `devices` (D19).
+  An unknown argument's error lists the tool's arguments.
 
 ### 2.3 What `check_layout` reports
 
@@ -270,7 +271,7 @@ For each frame, every finding that applies:
 | `in-inset` | the frame overlaps the top, bottom, left or right inset | the edge and the overlap depth |
 | `cut-by-corner` | a frame corner lies outside the display's corner curve | the corner and the depth: the distance from the curve's centre minus the radius |
 | `near-corner` | a frame corner lies within the display radius of both edges at a corner, and inside the curve | the gap to the curve, and the concentric radius: the display radius minus the frame's margin, at most half the frame's shorter side, with a margin below 0 counted as 0 (D17) |
-| `under-system-bar` | the frame overlaps the status bar, the app's top bar (`navigation`: UINavigationBar with an inline title, or Material 3's TopAppBar) or the app's bottom tab bar (`tab`) the dataset records | the bar and the overlap depth |
+| `under-bar` | the frame overlaps a bar the dataset records: the status bar (`status`), the app's top bar (`top`: UINavigationBar with an inline title, or Material 3's TopAppBar; the dataset's `navigationBar`) or the app's bottom bar (`bottom`: UITabBar, or Material 3's NavigationBar; the dataset's `tabBar`) (D19) | the bar and the overlap depth |
 | `crosses-fold` | the frame crosses the fold's band | whether the fold separates the halves in this screen |
 | `in-occlusion-region` | the frame overlaps a region the dataset records, such as the iPhone Duo's camera | the region's kind and whether the system reports it active |
 
@@ -282,7 +283,7 @@ both edges it is cut off by 3.05 pt. Both are test cases (§5).
 
 `src/lib/geometry.ts` holds the arithmetic of §2.3. Spec 001's phase 6 writes it with the corner
 fit and pixel snapping its playgrounds use (spec 001 §3.4); phase 2 here adds the findings only
-`check_layout` reports: `outside-window`, `in-inset`, `under-system-bar`, `crosses-fold` and
+`check_layout` reports: `outside-window`, `in-inset`, `under-bar`, `crosses-fold` and
 `in-occlusion-region`. `check_layout` and the playgrounds import the one file, and one test file
 covers it.
 
@@ -541,13 +542,16 @@ The test also found text a model is likely to misread:
 - the 64 KiB body limit;
 - "must have at least 1 items", and "is not an argument of this tool" for a key inside a frame.
 
-Phase 6 rewrites the descriptions and the messages, and keeps the names (D18).
+Phase 6 rewrote the descriptions and the messages, and kept the names (D18). Phase 7 renames the
+device arguments and the bar finding (D19).
 
 `tests/support/mcp-cases.ts` holds the run's 77 tool calls, and 3 that phase 6 adds. Each case gives
 the outcome after phase 6: a result, optionally matching a partial `structuredContent`, or an error
 holding a given text. `tests/mcp.test.ts` replays them on the Worker. A later eval script can send
 the same calls to the live server, at most 25 a minute and with its own `User-Agent`, and compare
-each answer with the file's `matches()`. The protocol cases stay in §5's unit tests.
+each answer with the file's `matches()`. The protocol cases stay in §5's unit tests. Phase 7
+writes the calls with D19's names. The live call that sent `device` to `get_device` now sends
+`id`, and expects the error that lists the tool's arguments.
 
 ---
 
@@ -561,6 +565,7 @@ each answer with the file's `matches()`. The protocol cases stay in §5's unit t
 | 4 | the skill, `references/devices.md` and its generator, the two plugin manifests, the icon and `.mcp.json`, the eval cases and a first round, S17 to S20, the zip, the install steps on `/agents` | the skill names phase 2's tools |
 | 5 | deploy, the live checks of §5, Workers logs on, `server.json` and `mcp-registry.yml` with the first publish; then the user's steps: the `mcp-registry` environment and its reviewer, the directory submissions of §4.4, and the plugin directory submission | needs spec 001's deploy phase |
 | 6 | the fixes of §5.1 under D13 to D18, the tool descriptions and argument errors, `tests/support/mcp-cases.ts`, `server.json` 1.1.0, then the tag `mcp-v1.1.0` after the deploy | §5.1's live test ran on phase 5's deploy; directory reviewers will call the tools |
+| 7 | the renames of D19 in `worker/tools.ts`, the server's `instructions`, the tests and `tests/support/mcp-cases.ts`; `SKILL.md` and `plugin.json` 1.0.1; the `check_layout` line on `/agents`; `server.json` 1.2.0, then the tag `mcp-v1.2.0` after the deploy | no client was built against 1.0.0 or 1.1.0, and the directory listings of §4.4 had not gone live |
 
 Commit subjects carry the prefix `[002-agent-interfaces]`.
 
@@ -720,6 +725,30 @@ a client written against 1.0.0. Instead:
 answer from 1.1.0, except an orientation and a rotation that disagree, a repeated id, a length past
 ±1,000,000, and the fixed values of D14, D15 and D17. The cost: a model still reads three names for
 one argument.
+
+D19 replaced this decision on 2026-11-23.
+
+**D19 — One name for the device argument, and bar names that say where the bar is.** This replaces
+D18. D18 kept the names to spare clients written against 1.0.0. No client was built against 1.0.0
+or 1.1.0, and the directory listings of §4.4 had not gone live. A model reads the argument names
+from `tools/list` in each session, so a rename costs it nothing. Phase 7 renames:
+
+- `get_device`'s `id` to `device`, and `compare_devices`' `ids` to `devices`. Every tool that takes
+  one device then calls it `device`. §5.1's live test sent `device` to `get_device` and got an
+  error.
+- the finding `under-system-bar` to `under-bar`, because two of its three bars belong to the app.
+- the `bar` values `navigation` and `tab` to `top` and `bottom`. On Android, the system's
+  navigation bar and Material 3's NavigationBar both sit at the bottom, so `navigation` pointed a
+  model at the wrong bar.
+
+The dataset keeps `navigationBar` and `tabBar`, because `data/schema.json` changes only by an
+export (spec 001 §2.5); the `bar` description names both fields. No old name stays as an alias,
+because an alias puts a second name back into the schema. A call with an old name gets the
+unknown-argument error, which lists the tool's arguments. The site's `/compare?ids=` and the
+`compare_changed` event's `ids` stay: they belong to the pages, and no MCP client reads them.
+
+`server.json` goes to 1.2.0, a minor version, though a call with an old name now fails. The user
+chose the minor version, because no client depends on the old names.
 
 ---
 

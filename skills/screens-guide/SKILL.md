@@ -134,7 +134,8 @@ The display's rounded corners clip whatever is drawn under them.
 3. With the MCP server, call `check_layout` with the device, the screen for a foldable, the
    orientation or rotation, and the frames. It reports, per frame: `outside-window`, `in-inset`,
    `cut-by-corner` with the depth, `near-corner` with the gap and the concentric radius,
-   `under-system-bar`, `crosses-fold` and `in-occlusion-region`.
+   `under-bar` for the status bar or the app's top or bottom bar, `crosses-fold` and
+   `in-occlusion-region`.
 4. Without it, check the same against [references/devices.md](references/devices.md) with the
    corner arithmetic above.
 5. Repeat in landscape, and on Android at each rotation the app allows: the insets and bars change.

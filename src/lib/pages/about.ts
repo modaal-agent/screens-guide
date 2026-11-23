@@ -99,7 +99,7 @@ export function agentsDoc(): Doc {
       {
         type: 'list',
         items: [
-          "Lengths are in the device's unit and positions in window coordinates, as in the files. `check_layout` takes frames in the same coordinates and reports each one that reaches outside the window, into an inset, past a rounded corner, under a system bar, across a fold or into a reserved region, with the numbers.",
+          "Lengths are in the device's unit and positions in window coordinates, as in the files. `check_layout` takes frames in the same coordinates and reports each one that reaches outside the window, into an inset, past a rounded corner, under the status bar or the app's top or bottom bar, across a fold or into a reserved region, with the numbers.",
           `Each client address may send ${MINUTE_LIMIT} requests a minute and ${DAY_LIMIT.toLocaleString('en-US')} a UTC day. A request over either limit gets HTTP 429 with \`Retry-After\`, the seconds until the limit resets.`,
           'The server keeps no session and answers each request with one JSON response; it opens no event stream.',
         ],
