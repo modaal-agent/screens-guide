@@ -5,6 +5,7 @@ import { WORKER_EVENT_DOCS } from '../../../worker/analytics.ts'
 import { DAY_LIMIT, MINUTE_LIMIT } from '../../../worker/ratelimit.ts'
 import { TOOLS } from '../../../worker/tools.ts'
 import { COOKIE_DAYS, EVENT_DOCS, POSTHOG_HOST, STORAGE_DOCS } from '../analytics.ts'
+import { APPEARANCE_STORAGE_DOC } from '../appearance.ts'
 import type { Block, Doc } from '../doc.ts'
 import { DATA, DEVICES, readingCount } from '../data.ts'
 import { DATA_LICENSE, SITE } from '../site.ts'
@@ -204,7 +205,7 @@ export function privacyDoc(): Doc {
     blocks: [
       {
         type: 'p',
-        text: "screens.guide sets PostHog's cookie only if you allow it, in the banner at the bottom of the page. Until you choose, it sets no cookie and writes nothing to your browser's local or session storage. Either choice sets one cookie that records it. Its pages load scripts and styles from screens.guide only.",
+        text: "screens.guide sets PostHog's cookie only if you allow it, in the banner at the bottom of the page. Until you choose, it sets no cookie and writes nothing to your browser's local or session storage, except the appearance you pick at the bottom of a page. Either choice sets one cookie that records it. Its pages load scripts and styles from screens.guide only.",
       },
       { type: 'h2', text: 'Usage events' },
       {
@@ -220,15 +221,15 @@ export function privacyDoc(): Doc {
         type: 'p',
         text: "With each event, PostHog's library adds the page's address and the referring page, the browser's user agent, name and version, the operating system, the device type, the screen and window sizes, the language and the time zone. PostHog's servers receive each request's IP address; [PostHog's privacy policy](https://posthog.com/privacy) covers what they keep. The site's code that sends the events is `src/lib/analytics.ts` in the [source](https://github.com/modaal-agent/screens-guide).",
       },
-      { type: 'h2', text: 'Cookies', id: 'cookies' },
+      { type: 'h2', text: 'Cookies and storage', id: 'cookies' },
       {
         type: 'p',
-        text: `PostHog's library sets the entries below, on screens.guide only. After ${COOKIE_DAYS} days both cookies expire and the banner asks again. To change your choice, use the Cookies button at the bottom of any page: "No cookie" deletes PostHog's cookie and its storage entries.`,
+        text: `The site sets the entries below and no others. PostHog's library sets the first three, on screens.guide only. After ${COOKIE_DAYS} days both cookies expire and the banner asks again. To change your choice, use the Cookies button at the bottom of any page: "No cookie" deletes PostHog's cookie and its storage entries. The last entry keeps the appearance you pick at the bottom of a page; picking Auto deletes it.`,
       },
       {
         type: 'table',
         head: ['Name', 'Kind', 'Set when', 'Holds'],
-        rows: STORAGE_DOCS.map((e) => ({ cells: [`\`${e.name}\``, e.kind, e.when, e.holds] })),
+        rows: [...STORAGE_DOCS, APPEARANCE_STORAGE_DOC].map((e) => ({ cells: [`\`${e.name}\``, e.kind, e.when, e.holds] })),
       },
       { type: 'h2', text: 'Events from the server' },
       {

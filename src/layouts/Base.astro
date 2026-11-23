@@ -1,6 +1,7 @@
 ---
 import '../styles/global.css'
 import ConsentBanner from '../components/ConsentBanner.astro'
+import { APPEARANCE_HEAD_SCRIPT } from '../lib/appearance.ts'
 import { DATA, REPOSITORY, SITE } from '../lib/data.ts'
 
 interface Props {
@@ -29,6 +30,7 @@ const fullTitle = path === '/' ? title : `${title} · screens.guide`
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script is:inline set:html={APPEARANCE_HEAD_SCRIPT} />
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
@@ -61,11 +63,19 @@ const fullTitle = path === '/' ? title : `${title} · screens.guide`
         <button type="button" class="footer-button" data-consent="open" hidden>Cookies</button>
         <a href={REPOSITORY}>Source</a>
         <span>Data <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>, code MIT</span>
+        <div class="appearance" role="group" aria-labelledby="appearance-label" data-appearance-group hidden>
+          <span id="appearance-label">Appearance</span>
+          <button type="button" data-appearance="auto" aria-pressed="true">Auto</button>
+          <button type="button" data-appearance="light" aria-pressed="false">Light</button>
+          <button type="button" data-appearance="dark" aria-pressed="false">Dark</button>
+        </div>
       </div>
     </footer>
     <ConsentBanner />
     <script>
       import { startAnalytics, trackDataLinks, wireConsent } from '../lib/analytics.ts'
+      import { wireAppearance } from '../lib/appearance.ts'
+      wireAppearance(document)
       trackDataLinks(document)
       startAnalytics(location.hostname).then((started) => {
         if (started) wireConsent(document)

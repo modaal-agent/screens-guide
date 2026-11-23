@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest'
 import data from '../data/devices.json' with { type: 'json' }
 import { markdownPath } from '../src/lib/doc.ts'
 import { STORAGE_DOCS } from '../src/lib/analytics.ts'
+import { APPEARANCE_HEAD_SCRIPT, APPEARANCE_STORAGE_DOC } from '../src/lib/appearance.ts'
 import { allPages } from '../src/lib/pages/index.ts'
 
 const DIST = join(import.meta.dirname, '..', 'dist')
@@ -253,7 +254,29 @@ describe('the cookie choice', () => {
     expect(html).toContain('<h2 id="cookies">')
     expect(file('index.html')).toContain('href="/privacy#cookies"')
     const page = text(html)
-    for (const e of STORAGE_DOCS) for (const name of e.name.split(', ')) expect(page).toContain(name)
+    for (const e of [...STORAGE_DOCS, APPEARANCE_STORAGE_DOC]) for (const name of e.name.split(', ')) expect(page).toContain(name)
     expect(page).toContain('365 days')
+  })
+})
+
+describe('the appearance buttons', () => {
+  it('are in every footer, hidden until the script shows them, with Auto pressed', () => {
+    for (const f of files('.html')) {
+      const html = readFileSync(f, 'utf8')
+      const group = html.match(/<footer[\s\S]*?<div class="appearance"[^>]*>([\s\S]*?)<\/div>/)
+      expect(group, relative(DIST, f)).not.toBeNull()
+      expect(group![0], relative(DIST, f)).toMatch(/<div class="appearance"[^>]*\shidden[\s>]/)
+      expect([...group![1].matchAll(/data-appearance="(\w+)" aria-pressed="(\w+)"/g)].map((m) => `${m[1]}:${m[2]}`)).toEqual(['auto:true', 'light:false', 'dark:false'])
+    }
+  })
+
+  it('apply a stored choice from an inline script ahead of every stylesheet', () => {
+    for (const f of files('.html')) {
+      const html = readFileSync(f, 'utf8')
+      const at = html.indexOf(`<script>${APPEARANCE_HEAD_SCRIPT}</script>`)
+      expect(at, relative(DIST, f)).toBeGreaterThan(-1)
+      const sheet = html.indexOf('<link rel="stylesheet"')
+      if (sheet > -1) expect(at, relative(DIST, f)).toBeLessThan(sheet)
+    }
   })
 })

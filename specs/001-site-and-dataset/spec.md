@@ -3,7 +3,7 @@
 **Status:** Written 2026-11-17, revised in place the same day with the answers to §10.1 to §10.8.
 Phases 1 to 6 and phase 7's code implemented (§7.1), merged into `main` as `9a0db6b` on
 2026-11-18; the deploy workflow published the site that day (run 44375511902). Phase 7's user
-steps and live checks are open. Amended on 2026-11-23 by §12, cookies with consent.
+steps and live checks are open. Amended on 2026-11-23 by §12, cookies with consent, and §13, the appearance buttons.
 **Baseline:** `main` at `77f08eb`, the repository files.
 **Obsoletes:** nothing.
 
@@ -402,6 +402,8 @@ Preact components, rendered on the server and hydrated in the browser (D9):
   frame's corner against the display's (the depth inside or outside the curve, and the concentric
   radius). Spec 002's `check_layout` imports the same file and adds its other findings to it
   (spec 002 §2.4).
+
+*§13 (2026-11-23) adds the appearance buttons in the footer.*
 
 ---
 
@@ -836,6 +838,7 @@ https://screens.guide, with requests to PostHog's host answered locally and deco
   "Usage events" paragraph say when a cookie is set.
 - `SECURITY.md` counts as a vulnerability a cookie or storage entry set before "Allow cookie", or
   one `/privacy` does not list.
+  *§13.2 (2026-11-23) widens this line to the appearance entry.*
 - Unchanged: the events of §5.5, since no `$opt_in` event is sent; the content security policy,
   since the bar's script is the layout's bundled script under `'self'`.
 - Tests: `tests/analytics.test.ts` covers the options, `consent()`, `setConsent()`, `forget()` and
@@ -874,3 +877,50 @@ did. It links the page views of a visitor who allows the cookie across visits.
 - Keep cookieless mode on in the PostHog project's settings (§5.5). Without it PostHog drops the
   page views of every visitor who has not chosen or who declined.
 - After the deploy, run §12.3's checks in a browser.
+
+---
+
+## 13. Appearance buttons (added 2026-11-23)
+
+The user asked on 2026-11-23 for an Auto, Light and Dark choice at the bottom of each page. Until
+then the pages followed the system's setting only, through `prefers-color-scheme` (§3.4).
+
+### 13.1 Measured (2026-11-23)
+
+In WebKit with Playwright 1.56.1, loading `dist/` as https://screens.guide:
+
+- With no choice, a page follows the system: the body's background is `rgb(19, 20, 22)` under a
+  dark system and `rgb(251, 251, 250)` under a light one, and Auto is pressed.
+- Light under a dark system, and Dark under a light one, change the background and the native
+  controls' `color-scheme`. The next page opens in the same appearance.
+- Auto deletes the stored entry, and the page follows the system again.
+- With every script under `/_astro/` blocked, a stored Dark still applies: the inline script in
+  `<head>` sets it before the first paint.
+- The inline script raises no content security policy violation. Astro hashes the scripts it
+  bundles and not an `is:inline` one, so `astro.config.mjs` adds its hash.
+- At 390 px, in light and dark, the footer shows the buttons on one line, with no horizontal scroll.
+
+### 13.2 What changes
+
+- `src/lib/appearance.ts` holds the choice: `readAppearance()`, `saveAppearance()`,
+  `applyAppearance()`, `wireAppearance()`, the key `APPEARANCE_KEY` and the inline script
+  `APPEARANCE_HEAD_SCRIPT`.
+- The layout writes that script first in `<head>`, and three buttons in the footer, hidden until
+  `wireAppearance()` shows them. The buttons work on every host.
+- Light or Dark sets `data-theme` on `<html>` and stores `light` or `dark` under the local storage
+  key `appearance`. Auto removes both.
+- `src/styles/global.css` applies the dark tokens under a dark system unless `data-theme` is
+  `light`, and again for `data-theme="dark"`. `tests/appearance.test.ts` compares the two blocks.
+- `astro.config.mjs` adds the script's SHA-256 hash to `script-src`.
+- `/privacy`'s section becomes "Cookies and storage", and lists the `appearance` entry beside
+  PostHog's. `SECURITY.md` counts an entry that section does not list, or one set before the action
+  it names, as a vulnerability.
+- Picking an appearance sends no event (§5.5).
+
+### 13.3 Decisions
+
+**D17 — The choice is a local storage entry, written only by a click on Light or Dark.** The site is
+static, so no request needs the choice, and a cookie would send it with each one. Keeping the
+choice for the open page only was the alternative; each new page would open in the system's
+appearance again. The cost: one storage entry, which `/privacy` lists, and an inline script whose
+hash the policy carries.

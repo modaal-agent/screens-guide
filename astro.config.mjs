@@ -1,6 +1,8 @@
 // @ts-check
+import { createHash } from 'node:crypto'
 import preact from '@astrojs/preact'
 import { defineConfig } from 'astro/config'
+import { APPEARANCE_HEAD_SCRIPT } from './src/lib/appearance.ts'
 
 export default defineConfig({
   site: 'https://screens.guide',
@@ -30,6 +32,11 @@ export default defineConfig({
         "base-uri 'self'",
         "form-action 'self'",
       ],
+      // Astro hashes the scripts it bundles, not an is:inline one: the layout's appearance script
+      // (src/lib/appearance.ts), which runs before the first paint, is added by its hash here.
+      scriptDirective: {
+        hashes: [`sha256-${createHash('sha256').update(APPEARANCE_HEAD_SCRIPT).digest('base64')}`],
+      },
     },
   },
 })

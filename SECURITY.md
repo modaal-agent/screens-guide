@@ -16,8 +16,9 @@ reads `main`, so a fix is published by landing there.
   `public/_headers` or the Worker do not allow. The data files, `llms.txt` and the Markdown copies
   carry `Access-Control-Allow-Origin: *` on purpose.
 - A usage event that carries more than its spec lists, such as the client's address, text a client
-  sent or a `check_layout` frame; a cookie or browser storage entry the site sets before the
-  visitor chooses "Allow cookie"; or one that the "Cookies" section of `/privacy` does not list.
+  sent or a `check_layout` frame; a cookie or browser storage entry that the "Cookies and storage"
+  section of `/privacy` does not list, or one set before the visitor's action that section names
+  for it.
 - A value in `data/devices.json` that reached it by any route other than the exporter.
 - A skill under `skills/` that instructs an agent to run a command, fetch and execute code, or send
   a credential anywhere.
