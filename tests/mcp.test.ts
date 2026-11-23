@@ -4,7 +4,8 @@ import { describe, expect, it, vi } from 'vitest'
 import worker from '../worker/index.ts'
 import { MAX_BODY, SUPPORTED_VERSIONS } from '../worker/mcp.ts'
 import { DailyCount, checkRateLimit } from '../worker/ratelimit.ts'
-import { TOOLS } from '../worker/tools.ts'
+import { MAX_MAGNITUDE, TOOLS } from '../worker/tools.ts'
+import { LIVE_CASES, matches } from './support/mcp-cases.ts'
 import { call, post, stubEnv } from './support/worker.ts'
 
 const Ajv = ((Ajv2020 as any).default ?? Ajv2020) as typeof Ajv2020
@@ -102,7 +103,7 @@ describe('the protocol', () => {
 
 describe('the tools', () => {
   it('declare input schemas in the keywords worker/arguments.ts checks, and no other', () => {
-    const CHECKED = new Set(['type', 'properties', 'required', 'additionalProperties', 'items', 'enum', 'minimum', 'minLength', 'maxLength', 'minItems', 'maxItems'])
+    const CHECKED = new Set(['type', 'properties', 'required', 'additionalProperties', 'items', 'enum', 'minimum', 'maximum', 'minLength', 'maxLength', 'minItems', 'maxItems', 'uniqueItems'])
     const NOTES = new Set(['description', 'title', 'default', 'examples'])
     const walk = (schema: Record<string, unknown>, path: string) => {
       for (const [key, value] of Object.entries(schema)) {
@@ -212,6 +213,78 @@ describe('the tools', () => {
     expect(b.values[0].result).toBe(0.3333)
     expect((await tool('convert_units', { device: 'iphone-17', values: [1], from: 'dp', to: 'px' })).isError).toBe(true)
   })
+
+  // The defects of the live test of 2026-11-23 (spec 002 §5.1), one test per decision.
+  it('refuses an orientation and a rotation that disagree, naming the rotation (D13)', async () => {
+    for (const [name, args] of [
+      ['get_device', { id: 'iphone-17', orientation: 'portrait', rotation: 90 }],
+      ['check_layout', { device: 'iphone-17', orientation: 'portrait', rotation: 90, frames: [{ name: 'a', x: 0, y: 0, width: 1, height: 1 }] }],
+    ] as const) {
+      const r = await tool(name, args)
+      expect(r.isError, name).toBe(true)
+      expect(r.content[0].text).toBe("Rotation 90 gives the iPhone 17's main screen a landscape window, not portrait. Give orientation or rotation, or a pair that agrees.")
+    }
+    const fold = await tool('get_device', { id: 'pixel-fold', screen: 'open', orientation: 'portrait', rotation: 0 })
+    expect(fold.content[0].text).toMatch(/^Rotation 0 gives the Pixel Fold's open screen a landscape window, not portrait/)
+    expect((await ok('get_device', { id: 'iphone-17', orientation: 'landscape', rotation: 90 })).readings).toHaveLength(1)
+  })
+
+  it("names a version's build by the device's current build when the version is current (D14)", async () => {
+    const duo = await ok('get_device', { id: 'iphone-duo', runtime: '27.1' })
+    const current = await ok('get_device', { id: 'iphone-duo' })
+    expect(duo.runtime.build).toBe('24A94232')
+    expect(duo.readings).toEqual(current.readings)
+    expect((await ok('get_device', { id: 'iphone-duo', runtime: '24A94425' })).runtime.build).toBe('24A94425')
+  })
+
+  it('gives pixels per unit unrounded, and refuses a length beyond ±1,000,000 (D15)', async () => {
+    expect((await ok('convert_units', { device: 'pixel-8', values: [1], from: 'dp', to: 'px' })).pixelsPerUnit).toBe(2.625)
+    const rows = (await ok('compare_devices', { ids: ['pixel-8', 'pixel-9-pro-fold'] })).rows
+    expect(rows.map((r: { pixelsPerUnit: number }) => r.pixelsPerUnit)).toEqual([2.625, 2.4375, 2.4375, 2.4375])
+    expect((await ok('convert_units', { device: 'pixel-8', values: [MAX_MAGNITUDE, -MAX_MAGNITUDE], from: 'dp', to: 'px' })).values[0]).toEqual({ value: 1e6, result: 2625000, roundToPx: 2625000 })
+    const big = await tool('convert_units', { device: 'pixel-8', values: [1e39], from: 'dp', to: 'px' })
+    expect(big.content[0].text).toContain('arguments.values[0] must be at most 1000000')
+    const far = await tool('check_layout', { device: 'iphone-17', frames: [{ name: 'a', x: -1e7, y: 0, width: 1e308, height: 1 }] })
+    expect(far.content[0].text).toMatch(/frames\[0\]\.x must be at least -1000000.*frames\[0\]\.width must be at most 1000000/)
+  })
+
+  it('refuses a device named twice in compare_devices (D16)', async () => {
+    const r = await tool('compare_devices', { ids: ['iphone-17', 'pixel-8', 'iphone-17'] })
+    expect(r.isError).toBe(true)
+    expect(r.content[0].text).toContain('arguments.ids must not repeat an item: "iphone-17" appears more than once')
+  })
+
+  it("caps the concentric radius at half the frame's shorter side and at the display's radius (D17)", async () => {
+    const out = await ok('check_layout', {
+      device: 'iphone-17',
+      frames: [{ name: 'tiny', x: 4, y: 4, width: 20, height: 20 }, { name: 'off', x: -10, y: -10, width: 50, height: 50 }, { name: 'wide', x: -10, y: -10, width: 422, height: 300 }],
+    })
+    const radius = (i: number) => out.frames[i].findings.find((f: { corner?: string }) => f.corner === 'topLeft').concentricRadius
+    expect([radius(0), radius(1), radius(2)]).toEqual([10, 25, 62])
+  })
+
+  it('names the keys a tool or a frame takes when given another, and counts in the singular for one', async () => {
+    expect((await tool('get_device', { device: 'iphone-17' })).content[0].text)
+      .toBe('Invalid arguments for get_device: arguments.id is required; arguments.device is not an argument of this tool; its arguments are id, screen, orientation, rotation, runtime.')
+    expect((await tool('check_layout', { device: 'iphone-17', frames: [{ name: 'a', x: 0, y: 0, w: 1, height: 1 }] })).content[0].text)
+      .toContain('arguments.frames[0].w is not a key of arguments.frames[0]; its keys are name, x, y, width, height, cornerRadius')
+    expect((await tool('convert_units', { device: 'pixel-8', values: [], from: 'dp', to: 'px' })).content[0].text)
+      .toContain('arguments.values must have at least 1 item.')
+  })
+
+  it.each(LIVE_CASES.map((c, i) => [i, c.tool, JSON.stringify(c.args).slice(0, 80), c] as const))(
+    'replays live case %i: %s %s',
+    async (_i, name, _args, c) => {
+      const r = await tool(name, c.args)
+      if (c.expect === 'error') {
+        expect(r.isError, r.content[0].text).toBe(true)
+        if (c.error) expect(r.content[0].text).toContain(c.error)
+        return
+      }
+      const sc = await ok(name, c.args)
+      if (c.match) expect(matches(sc, c.match)).toEqual([])
+    },
+  )
 })
 
 describe('the rate limit', () => {

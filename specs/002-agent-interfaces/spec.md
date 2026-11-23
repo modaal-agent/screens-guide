@@ -4,8 +4,10 @@
 and analytics (spec 001 §10.3 and spec 001 §10.6) and the answers to §9.1 to §9.4. Phase 1 and
 the code of phases 2 to 5 implemented (§6.1), merged into `main` as `9a0db6b` on 2026-11-18.
 On 2026-11-23, `c56f201` turned on Workers Logs, and the tag `mcp-v1.0.0` published `server.json`
-1.0.0 to the MCP Registry. Phase 4's first eval round and phase 5's live checks and user steps are
-open. **Baseline:** `main` at `77f08eb`. **Obsoletes:** nothing.
+1.0.0 to the MCP Registry. The same day, a live test of every tool found seven defects (§5.1).
+Phase 6 fixes them under D13 to D18, and raises `server.json` to 1.1.0. Phase 4's first eval round
+and phase 5's other live checks and user steps are open. **Baseline:** `main` at `77f08eb`.
+**Obsoletes:** nothing.
 
 **Relates to:**
 
@@ -229,7 +231,9 @@ JPEG, GIF, WebP or ICO images (E12).
   result with `isError: true` and a text saying why, such as the valid device ids for an unknown id.
 - `Origin`: a request without the header is served, and so is one from `https://screens.guide`.
   Any other origin gets 403 (D3).
-- A body over 64 KiB gets 413. `check_layout` takes at most 200 frames.
+- A body over 64 KiB gets 413. `check_layout` takes at most 200 frames, and its description states
+  the body limit.
+- Every length or position a tool takes lies between -1,000,000 and 1,000,000 (D15).
 - A request over the rate limit of §2.6 gets 429.
 
 ### 2.2 Tools
@@ -243,10 +247,17 @@ text only. Each carries the annotations `readOnlyHint: true`, `idempotentHint: t
 | tool | input | output |
 | --- | --- | --- |
 | `list_devices` | `platform` (`ios`, `android`), `kind` (`phone`, `tablet`, `foldable`); both optional | one row per device: id, name, platform, kind, unit, each screen's id and portrait window size, the runtimes it has readings on, and its `current` runtime |
-| `get_device` | `id`; `screen`, `orientation` and `runtime`, optional | the device's readings from spec 001 §2.2: the `current` set, or the runtime given, narrowed to the screen and orientation when given |
-| `compare_devices` | `ids`, 2–8 device ids; `orientation` and `runtime`, optional | one row per device and screen, from each device's `current` readings unless `runtime` is given: window size, pixels, scale, safe-area insets, the safe area's rectangle, corner radii |
+| `get_device` | `id`; `screen`, `orientation`, `rotation` and `runtime`, optional | the device's readings from spec 001 §2.2: the `current` set, or the runtime given, narrowed to the screen, orientation and rotation when given |
+| `compare_devices` | `ids`, 2–8 different device ids; `orientation` and `runtime`, optional | one row per device and screen, from each device's `current` readings unless `runtime` is given: window size, pixels, pixels per unit (unrounded, D15), safe-area insets, the safe area's rectangle, corner radii |
 | `check_layout` | `device`, `screen`, `runtime` (both optional), `orientation`, and `frames`: a list of `{ name, x, y, width, height, cornerRadius? }` | per frame, the findings of §2.3 with their numbers, and the concentric radius for a frame near a rounded corner |
 | `convert_units` | `device`, `values`, `from` and `to`, each `pt`, `dp` or `px` | the converted values, and for Android the pixel value Compose's `Dp.roundToPx()` gives (rounded to the nearest pixel) |
+
+- A `runtime` that is a version names the device's `current` build when the version is the
+  current one, and the version's newest release build otherwise (D14).
+- An `orientation` and a `rotation` that disagree get an error naming the rotation's orientation
+  (D13).
+- The device argument keeps its three names, `id`, `ids` and `device`. The server's `instructions`
+  name them, and an unknown argument's error lists the tool's arguments (D18).
 
 ### 2.3 What `check_layout` reports
 
@@ -257,8 +268,8 @@ For each frame, every finding that applies:
 | `outside-window` | part of the frame lies outside the window | the overhang per edge |
 | `in-inset` | the frame overlaps the top, bottom, left or right inset | the edge and the overlap depth |
 | `cut-by-corner` | a frame corner lies outside the display's corner curve | the corner and the depth: the distance from the curve's centre minus the radius |
-| `near-corner` | a frame corner lies within the display radius of both edges at a corner, and inside the curve | the gap to the curve, and the concentric radius: the display radius minus the frame's margin |
-| `under-system-bar` | the frame overlaps the status bar, the navigation bar or the tab bar the dataset records | the bar and the overlap depth |
+| `near-corner` | a frame corner lies within the display radius of both edges at a corner, and inside the curve | the gap to the curve, and the concentric radius: the display radius minus the frame's margin, at most half the frame's shorter side, with a margin below 0 counted as 0 (D17) |
+| `under-system-bar` | the frame overlaps the status bar, the app's top bar (`navigation`: UINavigationBar with an inline title, or Material 3's TopAppBar) or the app's bottom tab bar (`tab`) the dataset records | the bar and the overlap depth |
 | `crosses-fold` | the frame crosses the fold's band | whether the fold separates the halves in this screen |
 | `in-occlusion-region` | the frame overlaps a region the dataset records, such as the iPhone Duo's camera | the region's kind and whether the system reports it active |
 
@@ -476,6 +487,67 @@ Live, in phase 5: the `claude mcp add` command of §4.2, then a session that lis
 `modaal-agent/screens-guide` and lists the skill and the server in `claude plugin details`. The
 first `mcp-v` tag publishes `server.json`, and the registry's API returns it.
 
+### 5.1 The live tool test of 2026-11-23
+
+An agent sent 98 HTTP requests to `https://screens.guide/mcp` on 2026-11-23, from 17:22 UTC, against
+`server.json` 1.0.0 and dataset 1.0.0. Each carried `User-Agent: screens-guide-tool-test/1.0`, which
+tells that day's `mcp_request` events of the test from others, and at most 25 went in any minute.
+
+- Each successful `structuredContent` was validated against its tool's `outputSchema` with Ajv's
+  2020-12 validator, and compared with the result's text.
+- 16 `get_device` results were compared with `data/devices.json` reading by reading, and
+  `compare_devices` rows field by field. All matched.
+- §2.3's worked example gave 8.15 pt inside the curve and 3.05 pt cut off.
+
+| calls | cases | passed | failed |
+| --- | --- | --- | --- |
+| protocol | 17 | 17 | 0 |
+| `list_devices` | 9 | 9 | 0 |
+| `get_device` | 28 | 26 | 2 |
+| `compare_devices` | 11 | 8 | 3 |
+| `check_layout` | 20 | 17 | 3 |
+| `convert_units` | 14 | 9 | 5 |
+
+The protocol cases:
+
+- `initialize` with `2025-06-18` and with an unknown version;
+- a notification, `tools/list`, `ping`, an unknown method, malformed JSON, `GET`, a message without
+  `jsonrpc`, and an unknown tool;
+- an unsupported `MCP-Protocol-Version` header, a foreign `Origin` and the site's own;
+- an array of three messages, `arguments` as an array, and a body over 64 KiB.
+
+The failures came from seven defects:
+
+| # | call | live result | fixed by |
+| --- | --- | --- | --- |
+| 1 | `get_device` `{"id":"iphone-17","orientation":"portrait","rotation":90}` | "get_device failed on the server; nothing in the arguments caused it": the filter found no reading, `pickReading` matched the rotation alone, and `readings[0]` was undefined | D13 |
+| 2 | `check_layout` with the same `orientation` and `rotation` | the landscape reading, with the orientation ignored | D13 |
+| 3 | `compare_devices` and `convert_units` on the Pixel 8 and the Pixel 9 Pro Fold | `pixelsPerUnit` 2.63 and 2.44, beside results computed with 2.625 and 2.4375 | D15 |
+| 4 | `convert_units` `{"device":"pixel-8","values":[1e39,1e308],"from":"dp","to":"px"}` | `null` for `roundToPx` and for one `result`, against the `outputSchema`: `Math.fround` overflowed to Infinity, which JSON writes as `null` | D15 |
+| 5 | `check_layout` on the iPhone 17 with a 20 × 20 pt frame at (4, 4), and a 50 × 50 pt frame at (-10, -10) | `concentricRadius` 58, above half the frame's side; and 72, above the display's 62 | D17 |
+| 6 | `get_device` `{"id":"iphone-duo","runtime":"27.1"}` | build 24A94425 with 11 readings, where the device's `current` 27.1 build, 24A94232, has 14 | D14 |
+| 7 | `compare_devices` `{"ids":["iphone-17","iphone-17"]}` | two identical rows | D16 |
+
+The test also found text a model is likely to misread:
+
+- the three names of the device argument;
+- `navigation` in `under-system-bar`, which is the app's top bar, where a model expects Android's
+  system navigation bar;
+- `check_layout`'s default screen on a foldable, `closed`;
+- `compare_devices`' rotation 0, which makes the Pixel Fold's open rows landscape;
+- the exact runtime strings, where `27` fails for 27.0;
+- the dotted paths that key `missing`;
+- the 64 KiB body limit;
+- "must have at least 1 items", and "is not an argument of this tool" for a key inside a frame.
+
+Phase 6 rewrites the descriptions and the messages, and keeps the names (D18).
+
+`tests/support/mcp-cases.ts` holds the run's 77 tool calls, and 3 that phase 6 adds. Each case gives
+the outcome after phase 6: a result, optionally matching a partial `structuredContent`, or an error
+holding a given text. `tests/mcp.test.ts` replays them on the Worker. A later eval script can send
+the same calls to the live server, at most 25 a minute and with its own `User-Agent`, and compare
+each answer with the file's `matches()`. The protocol cases stay in §5's unit tests.
+
 ---
 
 ## 6. Phasing
@@ -487,6 +559,7 @@ first `mcp-v` tag publishes `server.json`, and the registry's API returns it.
 | 3 | Markdown negotiation in `worker/index.ts`, the `page_served` and `file_served` events with their `run_worker_first` entries and their lines on `/privacy`, and their tests | uses phase 2's Worker script |
 | 4 | the skill, `references/devices.md` and its generator, the two plugin manifests, the icon and `.mcp.json`, the eval cases and a first round, S17 to S20, the zip, the install steps on `/agents` | the skill names phase 2's tools |
 | 5 | deploy, the live checks of §5, Workers logs on, `server.json` and `mcp-registry.yml` with the first publish; then the user's steps: the `mcp-registry` environment and its reviewer, the directory submissions of §4.4, and the plugin directory submission | needs spec 001's deploy phase |
+| 6 | the fixes of §5.1 under D13 to D18, the tool descriptions and argument errors, `tests/support/mcp-cases.ts`, `server.json` 1.1.0, then the tag `mcp-v1.1.0` after the deploy | §5.1's live test ran on phase 5's deploy; directory reviewers will call the tools |
 
 Commit subjects carry the prefix `[002-agent-interfaces]`.
 
@@ -595,6 +668,56 @@ binding is not available on the plan (§1.9). The costs:
 secret to a workflow that a fork's pull request starts. The cost: a change to the skill can land
 without a round, so the rule in `AGENTS.md` asks for the scores in the commit message, and review
 holds it.
+
+**D13 — An `orientation` and a `rotation` that disagree get an error.** On the iPhone 17,
+rotation 90 is landscape, so `portrait` with `90` names no reading. Before phase 6, `check_layout`
+took the rotation and dropped the orientation, and `get_device` failed with a server error (§5.1,
+defects 1 and 2). The error names the orientation the rotation gives, on the screen asked, so a
+model can fix its call in one retry. Letting either argument win would answer a question the model
+did not ask. The cost: a call that sends both must send a pair that agrees.
+
+**D14 — A version in `runtime` names the device's `current` build when the version is current.**
+Spec 001 §2.2 makes `current` the newest release build with a reading in each screen and rotation.
+The iPhone Duo's newer 27.1 build, 24A94425, lacks three readings: open at 90° and 180°, and
+half-open at 90°. Before phase 6, `runtime: "27.1"` took the newest 27.1 build, so naming the
+current version returned 11 readings where omitting `runtime` returned 14 (§5.1, defect 6). Any
+other version still names its newest release build. The cost: 24A94425 is reached by its build
+string only, which `list_devices` gives.
+
+**D15 — `pixelsPerUnit` is unrounded, and every length or position a tool takes is within
+±1,000,000.** An Android density divided by 160 is a short decimal, such as 420 / 160 = 2.625. At
+two decimals the field read 2.63, and a model that multiplied by it got 1082.06 px for the Pixel 8's
+411.43 dp, where the window is 1080 px wide (§5.1, defect 3). The bound keeps every result finite.
+`Math.fround` overflows past about 3.4 × 10^38, and JSON writes Infinity as `null`, which broke
+`convert_units`' `outputSchema` (§5.1, defect 4). The longest side in the dataset is 2,868 px, on
+the iPhone 16 Pro Max, so ±1,000,000 leaves room for a scroll offset. `worker/arguments.ts` gains
+`maximum`. The cost: a larger value gets an error.
+
+**D16 — `compare_devices` refuses a device named twice.** The input schema gains `uniqueItems`,
+which `worker/arguments.ts` checks, and the error names the repeated id. A repeated id gave two
+identical rows (§5.1, defect 7). The cost: none for a model that compares different devices.
+
+**D17 — The concentric radius is at most half the frame's shorter side, and a frame past an edge
+counts as on it.** `concentricRadius` in `src/lib/geometry.ts` held the cap, and `check_layout`
+called it without the frame's size, so a 20 × 20 pt frame got 58 pt (§5.1, defect 5). A frame
+corner past the window's edge gives a margin below 0, which raised the radius above the display's.
+The function now counts such a margin as 0, and the playgrounds call the same function.
+
+**D18 — The argument and finding names stay, and the text around them changes.** Renaming
+`id`, `ids` and `device` to one name, or `under-system-bar`'s `navigation` to `top-bar`, would break
+a client written against 1.0.0. Instead:
+
+- the server's `instructions` name each tool's device argument;
+- an unknown argument's error lists the tool's arguments, and an unknown key in a frame lists the
+  frame's keys;
+- the descriptions state the bars, the defaults, the exact runtime strings, the `missing` paths and
+  the body limit;
+- a count of one reads "1 item".
+
+`server.json` goes to 1.1.0, a minor version. A call 1.0.0 answered without error gets the same
+answer from 1.1.0, except an orientation and a rotation that disagree, a repeated id, a length past
+±1,000,000, and the fixed values of D14, D15 and D17. The cost: a model still reads three names for
+one argument.
 
 ---
 

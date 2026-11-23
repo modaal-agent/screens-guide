@@ -41,6 +41,11 @@ describe('concentricRadius', () => {
     expect(concentricRadius(55, 80, 10)).toBe(0)
     expect(concentricRadius(62, 0, 0, 100, 40)).toBe(20)
   })
+
+  it("counts a rectangle past an edge as on it, so it never exceeds the container's radius", () => {
+    expect(concentricRadius(62, -10, -10)).toBe(62)
+    expect(concentricRadius(62, -10, 16)).toBe(46)
+  })
 })
 
 describe('pixel snapping', () => {
