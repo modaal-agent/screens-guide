@@ -37,8 +37,10 @@ export interface Schema {
   items?: Schema
   enum?: unknown[]
   minimum?: number
+  maximum?: number
   minItems?: number
   maxItems?: number
+  uniqueItems?: boolean
   minLength?: number
   maxLength?: number
   $ref?: string

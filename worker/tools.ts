@@ -25,6 +25,10 @@ export interface Tool {
 }
 
 export const MAX_FRAMES = 200
+/** The largest request body /mcp reads (spec 002 §2.1). */
+export const MAX_BODY = 64 * 1024
+/** The largest length or position a tool takes, either sign, so no result overflows to Infinity. */
+export const MAX_MAGNITUDE = 1_000_000
 const DEFS = datasetSchema.$defs as Record<string, Schema>
 const ANNOTATIONS = { readOnlyHint: true, idempotentHint: true, openWorldHint: false } as const
 
@@ -69,9 +73,12 @@ const ROTATION: Schema = {
 }
 const RUNTIME: Schema = {
   type: 'string', minLength: 1,
-  description: "A runtime build such as 24A434, or a version such as 27.2; the device's current build when omitted.",
+  description: "A runtime build such as 24A434, or a version such as 27.2 or 16, written exactly as list_devices gives it (27.0, not 27). A version names the device's current build when it is the current version, else that version's newest release build. The device's current build when omitted.",
 }
 const DEVICE_ID: Schema = { type: 'string', minLength: 1, description: 'A device id from list_devices, such as iphone-17 or pixel-8.' }
+const LENGTH: Schema = { type: 'number', minimum: -MAX_MAGNITUDE, maximum: MAX_MAGNITUDE }
+const SIZE: Schema = { type: 'number', minimum: 0, maximum: MAX_MAGNITUDE }
+const PIXELS_PER_UNIT: Schema = { type: 'number', description: 'Physical pixels per pt or dp: the scale on iOS, the density divided by 160 on Android, unrounded.' }
 
 // ── reading the dataset ─────────────────────────────────────────────────────────────────
 
@@ -85,9 +92,14 @@ function builds(d: Device): Runtime[] {
   return [...new Map(d.readings.map((r) => [r.runtime.build, r.runtime])).values()].sort(compareRuntimes)
 }
 
-/** The build a `runtime` argument names: a build, or the newest release build of a version. */
+/**
+ * The build a `runtime` argument names: a build; for a version, the device's current build when it
+ * is the current version, else the version's newest release build. `current` is the newest release
+ * build with a reading in each screen and rotation, so a newer build of the same version can hold
+ * fewer readings (spec 002 D14).
+ */
 function pickBuild(d: Device, runtime?: string): string {
-  if (!runtime) return d.current.build
+  if (!runtime || runtime === d.current.version) return d.current.build
   const all = builds(d)
   if (all.some((rt) => rt.build === runtime)) return runtime
   const ofVersion = all.filter((rt) => rt.version === runtime).sort((a, b) => Number(a.prerelease) - Number(b.prerelease) || compareRuntimes(b, a))
@@ -112,7 +124,13 @@ function pickReading(d: Device, build: string, screen?: string, orientation?: st
     const have = own.map((x) => `${x.orientation} ${x.rotation}°`).join(', ') || 'none'
     throw new ToolError(`The ${d.name} has no reading on ${build} for screen ${s}${rotation !== undefined ? ` at ${rotation}°` : orientation ? ` in ${orientation}` : ''}. Its readings there: ${have}.`)
   }
+  if (rotation !== undefined && orientation && r.orientation !== orientation) throw rotationConflict(d, s, r, orientation)
   return r
+}
+
+/** Orientation and rotation that disagree: rotation 90 on a phone is landscape, not portrait. */
+function rotationConflict(d: Device, screen: string, r: Reading, orientation: string): ToolError {
+  return new ToolError(`Rotation ${r.rotation} gives the ${d.name}'s ${screen} screen a ${r.orientation} window, not ${orientation}. Give orientation or rotation, or a pair that agrees.`)
 }
 
 function pixelsPerUnit(d: Device, r?: Reading): number {
@@ -175,7 +193,7 @@ const listDevices: Tool = {
 const getDevice: Tool = {
   name: 'get_device',
   title: "Get a device's readings",
-  description: "Returns a device's measured readings: window, pixels, safe-area insets, corner radii, size classes, status, navigation and tab bars, content margin, reserved regions and fold, one reading per screen and rotation. Gives the current runtime's readings unless a runtime is named; narrow them by screen, orientation or rotation. A null value has its reason in the reading's `missing`.",
+  description: "Returns a device's measured readings: window, pixels, safe-area insets, corner radii, size classes, the status bar, the app's top bar (navigationBar: UINavigationBar, or Material 3's TopAppBar), the bottom tab bar (tabBar: UITabBar, or Material 3's NavigationBar), content margin, reserved regions and fold, one reading per screen and rotation. Gives the current runtime's readings unless a runtime is named; narrow them by screen, orientation or rotation, which must agree when both are given (rotation 90 on a phone is landscape). A null value has its reason in the reading's `missing`, keyed by the field's dotted path, such as cornerRadii.measured.",
   inputSchema: {
     type: 'object', additionalProperties: false, required: ['id'],
     properties: { id: DEVICE_ID, screen: SCREEN, orientation: ORIENTATION, rotation: ROTATION, runtime: RUNTIME },
@@ -209,7 +227,15 @@ const getDevice: Tool = {
       (!args.screen || r.screen === args.screen) &&
       (!args.orientation || r.orientation === args.orientation) &&
       (args.rotation === undefined || r.rotation === args.rotation))
-    if (!readings.length) pickReading(d, build, args.screen as string | undefined, args.orientation as string | undefined, args.rotation as number | undefined)
+    if (!readings.length) {
+      // Throws the reason: a screen, rotation or orientation with no reading, or a pair that disagrees.
+      pickReading(d, build, args.screen as string | undefined, args.orientation as string | undefined, args.rotation as number | undefined)
+      const conflict = args.rotation !== undefined && args.orientation
+        ? d.readings.find((r) => r.runtime.build === build && r.rotation === args.rotation && (!args.screen || r.screen === args.screen))
+        : undefined
+      if (conflict) throw rotationConflict(d, conflict.screen, conflict, args.orientation as string)
+      throw new ToolError(`The ${d.name} has no reading on ${build} that matches these arguments.`)
+    }
     const { readings: _, ...device } = d
     return { dataset: dataset(), device, runtime: readings[0].runtime, readings }
   },
@@ -220,11 +246,11 @@ const getDevice: Tool = {
 const compareDevices: Tool = {
   name: 'compare_devices',
   title: 'Compare devices',
-  description: "Compares 2 to 8 devices side by side, one row per device and screen: window size, pixels, pixels per unit, safe-area insets, the safe area's rectangle and corner radii. Uses each device's current runtime and natural orientation unless an orientation or runtime is named.",
+  description: "Compares 2 to 8 different devices side by side, one row per device and screen: window size, pixels, pixels per unit, safe-area insets, the safe area's rectangle and corner radii. Uses each device's current runtime and its reading at rotation 0 unless an orientation or runtime is named. At rotation 0 a foldable's open screen can be landscape, as the Pixel Fold's open and half-open screens are; name an orientation to compare like with like.",
   inputSchema: {
     type: 'object', additionalProperties: false, required: ['ids'],
     properties: {
-      ids: { type: 'array', minItems: 2, maxItems: 8, items: DEVICE_ID },
+      ids: { type: 'array', minItems: 2, maxItems: 8, uniqueItems: true, items: DEVICE_ID },
       orientation: ORIENTATION,
       runtime: RUNTIME,
     },
@@ -242,7 +268,7 @@ const compareDevices: Tool = {
           properties: {
             id: { type: 'string' }, name: { type: 'string' }, unit: { type: 'string' }, screen: SCREEN, orientation: ORIENTATION,
             rotation: { type: 'integer' }, runtime: ref('runtime'), window: ref('size'), pixels: ref('pixels'),
-            pixelsPerUnit: { type: 'number' }, safeAreaInsets: nullable('insets'), safeArea: nullable('rect'),
+            pixelsPerUnit: PIXELS_PER_UNIT, safeAreaInsets: nullable('insets'), safeArea: nullable('rect'),
             cornerRadii: { type: 'object', properties: { profile: nullable('corners'), measured: nullable('corners') } },
           },
         },
@@ -273,7 +299,7 @@ const compareDevices: Tool = {
           const r = pickReading(d, build, s, args.orientation as string | undefined)
           rows.push({
             id: d.id, name: d.name, unit: d.unit, screen: s, orientation: r.orientation, rotation: r.rotation, runtime: r.runtime,
-            window: r.window, pixels: r.pixels, pixelsPerUnit: round2(pixelsPerUnit(d, r)),
+            window: r.window, pixels: r.pixels, pixelsPerUnit: pixelsPerUnit(d, r),
             safeAreaInsets: r.safeAreaInsets, safeArea: safeArea(r), cornerRadii: r.cornerRadii,
           })
         } catch (e) {
@@ -302,8 +328,11 @@ const FINDING: Schema = {
     corner: { type: 'string', enum: ['topLeft', 'topRight', 'bottomRight', 'bottomLeft'] },
     depth: { type: 'number', description: 'How far the frame reaches into the inset, past the curve, or under the bar.' },
     gap: { type: 'number', description: "The frame corner's distance inside the display's curve." },
-    concentricRadius: { type: 'number', description: "The corner radius that keeps an even gap to the display's corner: its radius minus the frame's larger distance from the two edges." },
-    bar: { type: 'string', enum: ['status', 'navigation', 'tab'] },
+    concentricRadius: { type: 'number', description: "The corner radius that keeps an even gap to the display's corner: its radius minus the frame's larger distance from the two edges, at most half the frame's shorter side." },
+    bar: {
+      type: 'string', enum: ['status', 'navigation', 'tab'],
+      description: "status: the system status bar. navigation: the app's top bar, UINavigationBar with an inline title or Material 3's TopAppBar. tab: the app's bottom tab bar, UITabBar or Material 3's NavigationBar.",
+    },
     axis: { type: 'string', enum: ['vertical', 'horizontal'] },
     separates: { type: 'boolean' },
     kind: { type: 'string' },
@@ -329,7 +358,7 @@ export function findings(r: Reading, f: Rect & { cornerRadius?: number }): Findi
       const R = radii[corner]
       if (!R || dx >= R || dy >= R) continue
       const depth = roundedCornerDepth(R, dx, dy, f.cornerRadius ?? 0)
-      const concentric = round2(concentricRadius(R, dx, dy))
+      const concentric = round2(concentricRadius(R, dx, dy, f.width, f.height))
       if (depth < 0) out.push({ type: 'cut-by-corner', corner, depth: round2(-depth), concentricRadius: concentric })
       else out.push({ type: 'near-corner', corner, gap: round2(depth), concentricRadius: concentric })
     }
@@ -358,11 +387,13 @@ function map<T extends object>(o: T, fn: (v: number) => number): T {
 const checkLayout: Tool = {
   name: 'check_layout',
   title: 'Check a layout against a device',
-  description: `Checks up to ${MAX_FRAMES} frames of a screen's layout against a device's measured window: whether each frame reaches outside the window, into a safe-area inset, past the display's rounded corner, under the status, navigation or tab bar, across a foldable's fold, or into a reserved region such as a camera. Each finding gives its numbers; a frame near a rounded corner gets the concentric radius. Frames are in the device's unit, in window coordinates from the top left.`,
+  description: `Checks up to ${MAX_FRAMES} frames of a screen's layout against a device's measured window: whether each frame reaches outside the window, into a safe-area inset, past the display's rounded corner, under the status bar or the app's top or bottom tab bar, across a foldable's fold, or into a reserved region such as a camera. Each finding gives its numbers; a frame near a rounded corner gets the concentric radius. Frames are in the device's unit, in window coordinates from the top left. Without screen, a foldable is checked on its first screen, closed (the cover display). Orientation and rotation must agree when both are given. The request body is at most ${MAX_BODY / 1024} KiB, so keep frame names short.`,
   inputSchema: {
     type: 'object', additionalProperties: false, required: ['device', 'frames'],
     properties: {
-      device: DEVICE_ID, screen: SCREEN, runtime: RUNTIME,
+      device: DEVICE_ID,
+      screen: { ...SCREEN, description: `${SCREEN.description} A foldable's first screen, closed, when omitted.` },
+      runtime: RUNTIME,
       orientation: { ...ORIENTATION, description: 'The window shape; the reading at rotation 0 when neither this nor rotation is given.' },
       rotation: ROTATION,
       frames: {
@@ -371,9 +402,7 @@ const checkLayout: Tool = {
           type: 'object', additionalProperties: false, required: ['name', 'x', 'y', 'width', 'height'],
           properties: {
             name: { type: 'string', maxLength: 200 },
-            x: { type: 'number' }, y: { type: 'number' },
-            width: { type: 'number', minimum: 0 }, height: { type: 'number', minimum: 0 },
-            cornerRadius: { type: 'number', minimum: 0 },
+            x: LENGTH, y: LENGTH, width: SIZE, height: SIZE, cornerRadius: SIZE,
           },
         },
       },
@@ -414,12 +443,12 @@ export function composeRoundToPx(dp: number, density: number): number {
 const convertUnits: Tool = {
   name: 'convert_units',
   title: 'Convert between pt, dp and px',
-  description: "Converts lengths on one device between its layout unit (pt on iOS, dp on Android) and physical pixels (px), at the device's measured scale or density. For dp to px on Android it also gives the whole pixel Compose's Dp.roundToPx() returns.",
+  description: `Converts lengths on one device between its layout unit (pt on iOS, dp on Android) and physical pixels (px), at the device's measured scale or density. For dp to px on Android it also gives the whole pixel Compose's Dp.roundToPx() returns. Each value is between -${MAX_MAGNITUDE.toLocaleString('en-US')} and ${MAX_MAGNITUDE.toLocaleString('en-US')}.`,
   inputSchema: {
     type: 'object', additionalProperties: false, required: ['device', 'values', 'from', 'to'],
     properties: {
       device: DEVICE_ID,
-      values: { type: 'array', minItems: 1, maxItems: 1000, items: { type: 'number' } },
+      values: { type: 'array', minItems: 1, maxItems: 1000, items: LENGTH },
       from: { type: 'string', enum: ['pt', 'dp', 'px'] },
       to: { type: 'string', enum: ['pt', 'dp', 'px'] },
     },
@@ -429,7 +458,7 @@ const convertUnits: Tool = {
     required: ['dataset', 'device', 'unit', 'pixelsPerUnit', 'values'],
     properties: {
       dataset: DATASET,
-      device: { type: 'string' }, unit: { type: 'string' }, pixelsPerUnit: { type: 'number' },
+      device: { type: 'string' }, unit: { type: 'string' }, pixelsPerUnit: PIXELS_PER_UNIT,
       values: {
         type: 'array',
         items: {
@@ -456,7 +485,7 @@ const convertUnits: Tool = {
       if (d.platform === 'android' && from === 'dp' && to === 'px' && density) row.roundToPx = composeRoundToPx(value, density / 160)
       return row
     })
-    return { dataset: dataset(), device: d.id, unit: d.unit, pixelsPerUnit: round2(scale), values }
+    return { dataset: dataset(), device: d.id, unit: d.unit, pixelsPerUnit: scale, values }
   },
 }
 

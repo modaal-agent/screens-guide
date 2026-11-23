@@ -28,10 +28,10 @@ export function cornerDepth(radius: number, dx: number, dy: number): number {
  * The radius that keeps an even gap between a rectangle's corner and a container corner of
  * `radius`, for a rectangle `gx` and `gy` from that corner's two edges: SwiftUI's
  * concentricCornerRadii, R − max(gx, gy), never below 0 nor above half the rectangle's shorter
- * side.
+ * side. A rectangle reaching past an edge counts as on it, so the radius never exceeds R.
  */
 export function concentricRadius(radius: number, gx: number, gy: number, width = Infinity, height = Infinity): number {
-  return Math.min(Math.max(radius - Math.max(gx, gy), 0), Math.min(width, height) / 2)
+  return Math.min(Math.max(radius - Math.max(gx, gy, 0), 0), Math.min(width, height) / 2)
 }
 
 /** Rounds to 2 decimals, the precision the dataset keeps. */
