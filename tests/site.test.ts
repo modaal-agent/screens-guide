@@ -6,6 +6,8 @@ import { join, relative } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import data from '../data/devices.json' with { type: 'json' }
 import { markdownPath } from '../src/lib/doc.ts'
+import { STORAGE_DOCS } from '../src/lib/analytics.ts'
+import { APPEARANCE_HEAD_SCRIPT, APPEARANCE_STORAGE_DOC } from '../src/lib/appearance.ts'
 import { allPages } from '../src/lib/pages/index.ts'
 
 const DIST = join(import.meta.dirname, '..', 'dist')
@@ -230,5 +232,51 @@ describe('the MCP server on the pages', () => {
     for (const event of ['mcp_request', 'page_served', 'file_served']) expect(page).toContain(event)
     expect(page).toContain('SHA-256 hash of your IP address')
     expect(page).toContain('worker/ratelimit.ts')
+    expect(page).toContain('Workers Logs')
+    expect(page).toContain('at most 7 days')
+  })
+})
+
+describe('the cookie choice', () => {
+  it('is on every page, hidden until the script shows it, with two buttons of one style', () => {
+    for (const f of files('.html')) {
+      const html = readFileSync(f, 'utf8')
+      const banner = html.match(/<section id="consent"[^>]*>([\s\S]*?)<\/section>/)
+      expect(banner, relative(DIST, f)).not.toBeNull()
+      expect(banner![0], relative(DIST, f)).toMatch(/^<section id="consent"[^>]*\shidden[\s>]/)
+      expect([...banner![1].matchAll(/<button type="button" data-consent="(\w+)">/g)].map((m) => m[1])).toEqual(['allow', 'decline'])
+      expect(html, relative(DIST, f)).toMatch(/<button type="button" class="footer-button" data-consent="open" hidden>Cookies<\/button>/)
+    }
+  })
+
+  it('lists on /privacy every entry posthog-js stores, under the heading the banner links to', () => {
+    const html = file('privacy.html')
+    expect(html).toContain('<h2 id="cookies">')
+    expect(file('index.html')).toContain('href="/privacy#cookies"')
+    const page = text(html)
+    for (const e of [...STORAGE_DOCS, APPEARANCE_STORAGE_DOC]) for (const name of e.name.split(', ')) expect(page).toContain(name)
+    expect(page).toContain('365 days')
+  })
+})
+
+describe('the appearance buttons', () => {
+  it('are in every footer, hidden until the script shows them, with Auto pressed', () => {
+    for (const f of files('.html')) {
+      const html = readFileSync(f, 'utf8')
+      const group = html.match(/<footer[\s\S]*?<div class="appearance"[^>]*>([\s\S]*?)<\/div>/)
+      expect(group, relative(DIST, f)).not.toBeNull()
+      expect(group![0], relative(DIST, f)).toMatch(/<div class="appearance"[^>]*\shidden[\s>]/)
+      expect([...group![1].matchAll(/data-appearance="(\w+)" aria-pressed="(\w+)"/g)].map((m) => `${m[1]}:${m[2]}`)).toEqual(['auto:true', 'light:false', 'dark:false'])
+    }
+  })
+
+  it('apply a stored choice from an inline script ahead of every stylesheet', () => {
+    for (const f of files('.html')) {
+      const html = readFileSync(f, 'utf8')
+      const at = html.indexOf(`<script>${APPEARANCE_HEAD_SCRIPT}</script>`)
+      expect(at, relative(DIST, f)).toBeGreaterThan(-1)
+      const sheet = html.indexOf('<link rel="stylesheet"')
+      if (sheet > -1) expect(at, relative(DIST, f)).toBeLessThan(sheet)
+    }
   })
 })

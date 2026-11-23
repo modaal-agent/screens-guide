@@ -22,8 +22,9 @@
   color-scheme: light dark;
 }
 
+/* Dark: the system's setting under Auto (src/lib/appearance.ts), unless the visitor picked Light. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --bg: #131416;
     --surface: #1b1c1f;
     --text: #e8eaed;
@@ -43,6 +44,29 @@
     --draw-margin: #6fcf97;
   }
 }
+
+/* Dark when the visitor picked it: the same values as the block above, which tests/appearance.test.ts compares. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #131416;
+  --surface: #1b1c1f;
+  --text: #e8eaed;
+  --muted: #9aa0a6;
+  --line: #34363a;
+  --accent: #8ab4f8;
+  --accent-soft: #1d2a3d;
+  --beta: #f2c46d;
+  --beta-soft: #3a2e14;
+  --draw-display: #e8eaed;
+  --draw-inset: rgba(240, 120, 90, 0.22);
+  --draw-safe: #f28b6d;
+  --draw-bar: rgba(138, 180, 248, 0.18);
+  --draw-bar-line: #8ab4f8;
+  --draw-region: rgba(190, 140, 240, 0.32);
+  --draw-fold: rgba(80, 200, 160, 0.35);
+  --draw-margin: #6fcf97;
+}
+:root[data-theme='light'] { color-scheme: light; }
 
 * { box-sizing: border-box; }
 
@@ -103,6 +127,60 @@ main > p, main > ul.prose { max-width: 46rem; }
 }
 .site-footer .inner { max-width: 1120px; margin: 0 auto; padding: 16px; display: flex; flex-wrap: wrap; gap: 6px 20px; }
 .site-footer a { color: var(--muted); }
+.footer-button { font: inherit; color: var(--muted); background: none; border: 0; padding: 0; text-decoration: underline; cursor: pointer; }
+.footer-button[hidden] { display: none; }
+
+/* The cookie choice (src/components/ConsentBanner.astro): a bar over the bottom of the viewport. */
+.consent {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 10;
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 12px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  font-size: 0.92rem;
+}
+.consent[hidden] { display: none; }
+
+/* The footer's appearance buttons (src/lib/appearance.ts): one segmented control. */
+.appearance { display: inline-flex; align-items: center; gap: 0; }
+.appearance[hidden] { display: none; }
+.appearance span { margin-right: 8px; }
+.appearance button {
+  font: inherit;
+  color: var(--muted);
+  background: none;
+  border: 1px solid var(--line);
+  margin-left: -1px;
+  padding: 1px 10px;
+  cursor: pointer;
+}
+.appearance button:first-of-type { border-radius: 6px 0 0 6px; margin-left: 0; }
+.appearance button:last-of-type { border-radius: 0 6px 6px 0; }
+.appearance button[aria-pressed='true'] { color: var(--text); background: var(--accent-soft); border-color: var(--accent); position: relative; }
+.consent p { flex: 1 1 18rem; margin: 0; }
+.consent-buttons { display: flex; gap: 8px; }
+.consent-buttons button {
+  font: inherit;
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  background: var(--accent-soft);
+  color: var(--text);
+  cursor: pointer;
+}
+.consent-buttons button:hover { background: var(--accent); color: var(--surface); }
 
 /* Tables scroll inside their wrapper, so the page never scrolls sideways. */
 .table-wrap { overflow-x: auto; margin: 0.6em 0 1.2em; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }

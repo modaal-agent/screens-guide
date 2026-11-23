@@ -56,6 +56,10 @@ describe('the Worker', () => {
     expect(w.durable_objects.bindings).toEqual([{ name: 'DAILY_COUNT', class_name: 'DailyCount' }])
     expect(w.migrations).toEqual([{ tag: 'v1', new_sqlite_classes: ['DailyCount'] }])
   })
+
+  it('turns on Workers Logs, which /privacy describes', () => {
+    expect(wrangler().observability).toEqual({ enabled: true })
+  })
 })
 
 describe('the routes the Worker runs for', () => {
