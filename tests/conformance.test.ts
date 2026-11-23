@@ -85,8 +85,8 @@ describe('the MCP endpoint under the SDK client', () => {
     // callTool validates structuredContent against the tool's outputSchema and throws when it fails.
     const calls: [string, Record<string, unknown>][] = [
       ['list_devices', { platform: 'ios' }],
-      ['get_device', { id: 'pixel-fold', screen: 'open' }],
-      ['compare_devices', { ids: ['iphone-17', 'pixel-8', 'ipad-pro-13-m5'] }],
+      ['get_device', { device: 'pixel-fold', screen: 'open' }],
+      ['compare_devices', { devices: ['iphone-17', 'pixel-8', 'ipad-pro-13-m5'] }],
       ['check_layout', { device: 'iphone-17', frames: [{ name: 'card', x: 16, y: 700, width: 370, height: 158, cornerRadius: 46 }] }],
       ['convert_units', { device: 'pixel-8', values: [16], from: 'dp', to: 'px' }],
     ]
@@ -96,7 +96,7 @@ describe('the MCP endpoint under the SDK client', () => {
       expect(result.isError, `${name}: ${JSON.stringify(result.content)}`).toBeFalsy()
       expect(result.structuredContent, name).toBeTruthy()
     }
-    const failed = await client.callTool({ name: 'get_device', arguments: { id: 'iphone-99' } })
+    const failed = await client.callTool({ name: 'get_device', arguments: { device: 'iphone-99' } })
     requests++
     expect(failed.isError).toBe(true)
     await client.close()

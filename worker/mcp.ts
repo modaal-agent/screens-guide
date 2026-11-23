@@ -12,7 +12,7 @@ export const SUPPORTED_VERSIONS = ['2025-11-25', '2025-06-18', '2025-03-26', '20
 export const INSTRUCTIONS = [
   'screens.guide: measured screen sizes, safe-area insets, corner radii, system bars, margins and folds of iPhones, iPads and Android devices, read on Xcode simulators and Android emulators.',
   "Lengths are in the device's unit: points (pt) on iOS, density-independent pixels (dp) on Android; px are physical pixels. Positions are window coordinates from the window's top left. A value no run measured is null, with its reason in the reading's `missing`; never fill it from another device.",
-  'Tools: list_devices gives the device ids; get_device a device\'s readings; compare_devices several devices side by side; check_layout checks frames against a device\'s safe area, corners, bars and fold; convert_units converts between pt or dp and px. get_device names the device in `id`, compare_devices in `ids`, and check_layout and convert_units in `device`.',
+  'Tools: list_devices gives the device ids; get_device a device\'s readings; compare_devices several devices side by side; check_layout checks frames against a device\'s safe area, corners, bars and fold; convert_units converts between pt or dp and px. get_device, check_layout and convert_units take the device id in `device`, and compare_devices takes several in `devices`.',
   `Dataset ${DATA.version} of ${DATA.updated}, licensed CC BY 4.0: credit "screens.guide, measured by Modaal".`,
 ].join('\n')
 
