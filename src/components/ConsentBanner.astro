@@ -1,0 +1,15 @@
+---
+// The cookie choice of spec 001 §12. It is hidden in the HTML; wireConsent() in
+// src/lib/analytics.ts shows it on screens.guide while the visitor has not chosen. The two
+// buttons have the same style, so declining takes the same effort as allowing.
+---
+<section id="consent" class="consent" aria-label="Cookie choice" hidden>
+  <p>
+    screens.guide counts page views in PostHog without a cookie. If you allow it, PostHog also sets a
+    cookie that recognizes your browser on later visits, for a year. <a href="/privacy#cookies">What it stores</a>
+  </p>
+  <div class="consent-buttons">
+    <button type="button" data-consent="allow">Allow cookie</button>
+    <button type="button" data-consent="decline">No cookie</button>
+  </div>
+</section>

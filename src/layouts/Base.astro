@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css'
+import ConsentBanner from '../components/ConsentBanner.astro'
 import { DATA, REPOSITORY, SITE } from '../lib/data.ts'
 
 interface Props {
@@ -57,14 +58,18 @@ const fullTitle = path === '/' ? title : `${title} · screens.guide`
         <span>Measured by <a href="https://modaal.dev">Modaal</a></span>
         <span>Dataset <a href="/changelog">{DATA.version}</a>, {DATA.updated}</span>
         <a href="/privacy">Privacy</a>
+        <button type="button" class="footer-button" data-consent="open" hidden>Cookies</button>
         <a href={REPOSITORY}>Source</a>
         <span>Data <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>, code MIT</span>
       </div>
     </footer>
+    <ConsentBanner />
     <script>
-      import { startAnalytics, trackDataLinks } from '../lib/analytics.ts'
+      import { startAnalytics, trackDataLinks, wireConsent } from '../lib/analytics.ts'
       trackDataLinks(document)
-      startAnalytics(location.hostname)
+      startAnalytics(location.hostname).then((started) => {
+        if (started) wireConsent(document)
+      })
     </script>
   </body>
 </html>

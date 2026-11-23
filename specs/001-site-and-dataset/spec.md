@@ -3,7 +3,8 @@
 **Status:** Written 2026-11-17, revised in place the same day with the answers to §10.1 to §10.8.
 Phases 1 to 6 and phase 7's code implemented (§7.1), merged into `main` as `9a0db6b` on
 2026-11-18; the deploy workflow published the site that day (run 44375511902). Phase 7's user
-steps and live checks are open. **Baseline:** `main` at `77f08eb`, the repository files.
+steps and live checks are open. Amended on 2026-11-23 by §12, cookies with consent.
+**Baseline:** `main` at `77f08eb`, the repository files.
 **Obsoletes:** nothing.
 
 **Relates to:**
@@ -37,6 +38,7 @@ steps and live checks are open. **Baseline:** `main` at `77f08eb`, the repositor
    zone's bot settings and PostHog's cookieless setting (§1.1).
 8. **PostHog counts page views and the use of the interactive parts, in its EU region, with no
    cookie** (§5.5, D15). Spec 002 adds events for the requests agents make.
+   *Superseded in part by §12 (2026-11-23): PostHog sets a cookie when a visitor allows it.*
 9. **The probes that read the devices stay private** (D8, §10.5). `/method` names the API or
    command behind each value.
 10. **All eight questions are answered** (§10). The docs article stays a separate page, updated
@@ -364,6 +366,9 @@ reads only `data/devices.json`.
 | `/privacy` | what PostHog receives from the pages, that it stores it in PostHog's EU region, and that the site sets no cookie (§5.5); spec 002 adds the Worker's events and the rate limit's count per hashed client address, each with the code that sends or keeps it |
 | any other path | the 404 page |
 
+*§12 (2026-11-23) supersedes "the site sets no cookie" in the `/privacy` row: `/privacy` lists the
+cookie a visitor can allow.*
+
 ### 3.2 What each page shows
 
 - A device page starts with the explorer at the device's current reading, then a table per
@@ -522,6 +527,10 @@ zone's bot settings, any setting that blocks AI crawlers or replaces `robots.txt
 - The user's step in phase 7: turn on cookieless mode in the PostHog project's settings. Without
   it PostHog drops the pages' events (§1.6).
 
+*§12 (2026-11-23) supersedes the second bullet's `cookieless_mode: 'always'` and "sets no cookie":
+the layout starts `posthog-js` in `on_reject` mode, and it sets a cookie after "Allow cookie". The
+last bullet's setting stays needed for visitors who have not chosen or who declined.*
+
 ---
 
 ## 6. Checks
@@ -549,6 +558,8 @@ Each phase runs the checks that exist by then; CI runs them on every pull reques
 - Phase 7 reruns the `wrangler dev` checks against https://screens.guide. There, a page view
   reaches the PostHog project, the console shows no content security policy violation, and the
   browser holds no cookie and no local or session storage entry for the site.
+
+*§12.3 (2026-11-23) replaces the last check's "the browser holds no cookie".*
 
 ---
 
@@ -670,6 +681,9 @@ PostHog and its project on 2026-11-17. This spec chooses how the pages use it:
 - Cloudflare Web Analytics was the other option. It counts visits without cookies, and records no
   named events and no events from the Worker.
 
+*D16 in §12.4 (2026-11-23) replaces the first bullet: a visitor who allows it gets PostHog's cookie,
+and the site shows a consent bar.*
+
 ---
 
 ## 9. Non-goals
@@ -749,7 +763,7 @@ again on the release. Needs an answer before phase 3.
 | E6 | WishKit, iPhone screen sizes | yes | https://www.wishkit.io/free-tools/iphone-screen-sizes; "checked October 8, 2026", read 2026-11-17 | §1.4 |
 | E7 | IANA RDAP bootstrap for DNS, and the registries' RDAP services | yes | https://data.iana.org/rdap/dns.json; queried 2026-11-17 | §1.5, D1 |
 | E8 | Cloudflare Registrar, TLD policies | yes | https://www.cloudflare.com/tld-policies/; unversioned, read 2026-11-17 | §1.5 |
-| E9 | npm registry: `astro`, `@astrojs/preact`, `preact`, `wrangler`, `vitest`, `posthog-js` | yes | https://www.npmjs.com/; versions as named in §1.6, read 2026-11-17 | §1.6 |
+| E9 | npm registry: `astro`, `@astrojs/preact`, `preact`, `wrangler`, `vitest`, `posthog-js` | yes | https://www.npmjs.com/; versions as named in §1.6, read 2026-11-17 | §1.6, §12.1 |
 | E10 | Cloudflare Workers docs, static assets routing | yes | https://developers.cloudflare.com/workers/static-assets/routing/worker-script/; unversioned, read 2026-11-17 | §1.6 |
 | E11 | The `llms.txt` file format | yes | https://llmstxt.org/; page modified 2026-08-10, read 2026-11-17 | §4.2 |
 | E12 | schema.org `Dataset` | yes | https://schema.org/Dataset; unversioned | §4.3 |
@@ -757,3 +771,106 @@ again on the release. Needs an answer before phase 3.
 | E14 | *Redacted:* the repository of another of the user's sites, built and deployed as §5 describes; read 2026-11-17 | no | — | §1.6, D10 |
 | E15 | `modaal-agent/skills`: `repository-init`, `writing-style`, `git-discipline`, `spec-driven-development`, and `scripts/check-skills.sh` | yes | https://github.com/modaal-agent/skills at `4cf5fcc` | §5.3 |
 | E16 | PostHog docs, "JavaScript configuration" | yes | https://posthog.com/docs/libraries/js/config; unversioned, read 2026-11-17 | §1.6, §1.7, §5.5, D15 |
+| E17 | Directive 2002/58/EC (the ePrivacy Directive), Article 5(3), as amended by Directive 2009/136/EC | yes | https://eur-lex.europa.eu/eli/dir/2002/58/oj; consolidated text, unversioned | §12.4 |
+
+---
+
+## 12. Cookies with consent (added 2026-11-23)
+
+The user asked on 2026-11-23 for PostHog to store a cookie, so that it can link a visitor's page
+views across visits, and for a consent banner. This section chooses how. It supersedes the claims
+that the site sets no cookie and shows no banner: §0's eighth item, §3.1's `/privacy` row, §5.5's
+second and last bullets, §6's last check and D15's first bullet. Each of those carries a line
+pointing here.
+
+### 12.1 Measured (2026-11-23)
+
+Read from `posthog-js` 1.447.10 (E9): its slim bundle's code and the `cookieless_mode` comment in
+`@posthog/types`. Then measured in WebKit with Playwright 1.56.1, loading `dist/` as
+https://screens.guide, with requests to PostHog's host answered locally and decoded.
+
+- With `cookieless_mode: 'on_reject'` and `opt_out_capturing_by_default: true`, posthog-js treats
+  a visitor who has not chosen as one who declined. It sends their `$pageview` in cookieless mode,
+  with `distinct_id` `$posthog_cookieless`, and the browser holds no cookie and no storage entry.
+- Without `opt_out_capturing_by_default`, `on_reject` sends no event until the visitor chooses.
+- `opt_in_capturing()` sends an `$opt_in` event unless `captureEventName` is `false`. It sends no
+  second `$pageview` for the page it is called on.
+- After "Allow cookie", the browser holds:
+  - the cookies `__ph_opt_in_out_<token>`, value 1, and `ph_<token>_posthog`, both on
+    `.screens.guide`, expiring 365 days later;
+  - the local storage entry `ph_<token>_posthog`;
+  - the session storage entries `ph_<token>_posthog`, `ph_<token>_window_id`,
+    `ph_<token>_primary_window_exists` and `ph_<token>_session_registered_properties`.
+- The cookie and the local storage entry hold a random device id, the session's random id and
+  start time, and the address and referrer of the first page. The next page's `$pageview` carries
+  the device id as `distinct_id`.
+- `opt_out_capturing()` deletes the cookie and the local storage entry. It leaves `_window_id` and
+  `_primary_window_exists` in session storage, so `setConsent(false)` deletes those.
+- After "No cookie", the browser holds `__ph_opt_in_out_<token>` with the value 0 and nothing else,
+  and each `$pageview` is cookieless.
+- Playwright sets `navigator.webdriver`, and posthog-js drops every event from such a browser as a
+  bot's. The measurement overrode the property to `false`.
+- On `localhost` the banner stays hidden, and the page sends no request to PostHog.
+- The pages raise no content security policy violation. Playwright's screenshot raises one, for the
+  stylesheet it injects to hide the caret.
+
+### 12.2 What changes
+
+- `POSTHOG_CONFIG` in `src/lib/analytics.ts`:
+  - `cookieless_mode` changes from `always` to `on_reject`;
+  - `persistence` changes from `memory` to `localStorage+cookie`;
+  - added: `opt_out_capturing_by_default: true`, `opt_out_capturing_persistence_type: 'cookie'`
+    and `cookie_expiration`, which is `COOKIE_DAYS`, 365.
+- New in `src/lib/analytics.ts`: `consent()`, `setConsent()`, `forget()`, `wireConsent()` and
+  `STORAGE_DOCS`, the entries of §12.1 as `/privacy` lists them.
+- `src/components/ConsentBanner.astro` is a bar fixed to the bottom of the viewport, hidden in the
+  HTML. `wireConsent()` shows it while the choice is `pending`, on screens.guide only.
+  - It has two buttons of one style, "Allow cookie" and "No cookie", and a link to
+    `/privacy#cookies`.
+  - It has no close button and does not cover the page. A visitor who ignores it is counted without
+    a cookie, and sees it again on the next page.
+- The footer gets a "Cookies" button that reopens the bar. It is hidden until PostHog has started.
+  "No cookie" there withdraws consent.
+- The choice is a cookie, so it expires with PostHog's after 365 days, and the bar asks again.
+- `/privacy` gets a "Cookies" section with `STORAGE_DOCS` as a table. Its first paragraph and its
+  "Usage events" paragraph say when a cookie is set.
+- `SECURITY.md` counts as a vulnerability a cookie or storage entry set before "Allow cookie", or
+  one `/privacy` does not list.
+- Unchanged: the events of §5.5, since no `$opt_in` event is sent; the content security policy,
+  since the bar's script is the layout's bundled script under `'self'`.
+- Tests: `tests/analytics.test.ts` covers the options, `consent()`, `setConsent()`, `forget()` and
+  `STORAGE_DOCS`. `tests/site.test.ts` checks the bar on every page, hidden, with its two buttons,
+  and that `/privacy` lists every entry.
+
+### 12.3 Checks
+
+This replaces §6's last check, against https://screens.guide:
+
+- A first visit holds no cookie and no storage entry, and its `$pageview` reaches the PostHog project
+  as a cookieless event.
+- "Allow cookie" sets the entries of §12.1, and the next page's `$pageview` carries a device id.
+- "No cookie" from the footer's Cookies button leaves `__ph_opt_in_out_<token>` with the value 0,
+  and no other cookie or storage entry.
+- The console shows no content security policy violation.
+
+### 12.4 Decisions
+
+**D16 — Cookies after consent, cookieless counting before it.** This replaces D15's first bullet.
+PostHog's `on_reject` mode, with opt-out by default, counts every visitor as the cookieless mode
+did. It links the page views of a visitor who allows the cookie across visits.
+
+- `on_reject` alone was the alternative. It sends nothing until a choice, so the site would lose
+  the page views of every visitor who ignores the bar.
+- A cookie for every visitor without asking was the other alternative. Article 5(3) of the
+  ePrivacy Directive (E17) requires consent before storing information in a visitor's browser,
+  unless it is strictly necessary for the service the visitor asked for.
+- The choice is stored in a cookie, not in local storage, so it expires after `COOKIE_DAYS` and the
+  bar asks again.
+- The cost: a bar on the first page of each visit until the visitor chooses; a second way PostHog
+  identifies visitors, so visitor counts mix cookie ids and cookieless hashes.
+
+### 12.5 The user's steps
+
+- Keep cookieless mode on in the PostHog project's settings (§5.5). Without it PostHog drops the
+  page views of every visitor who has not chosen or who declined.
+- After the deploy, run §12.3's checks in a browser.

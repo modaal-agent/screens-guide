@@ -6,6 +6,7 @@ import { join, relative } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import data from '../data/devices.json' with { type: 'json' }
 import { markdownPath } from '../src/lib/doc.ts'
+import { STORAGE_DOCS } from '../src/lib/analytics.ts'
 import { allPages } from '../src/lib/pages/index.ts'
 
 const DIST = join(import.meta.dirname, '..', 'dist')
@@ -230,5 +231,27 @@ describe('the MCP server on the pages', () => {
     for (const event of ['mcp_request', 'page_served', 'file_served']) expect(page).toContain(event)
     expect(page).toContain('SHA-256 hash of your IP address')
     expect(page).toContain('worker/ratelimit.ts')
+  })
+})
+
+describe('the cookie choice', () => {
+  it('is on every page, hidden until the script shows it, with two buttons of one style', () => {
+    for (const f of files('.html')) {
+      const html = readFileSync(f, 'utf8')
+      const banner = html.match(/<section id="consent"[^>]*>([\s\S]*?)<\/section>/)
+      expect(banner, relative(DIST, f)).not.toBeNull()
+      expect(banner![0], relative(DIST, f)).toMatch(/^<section id="consent"[^>]*\shidden[\s>]/)
+      expect([...banner![1].matchAll(/<button type="button" data-consent="(\w+)">/g)].map((m) => m[1])).toEqual(['allow', 'decline'])
+      expect(html, relative(DIST, f)).toMatch(/<button type="button" class="footer-button" data-consent="open" hidden>Cookies<\/button>/)
+    }
+  })
+
+  it('lists on /privacy every entry posthog-js stores, under the heading the banner links to', () => {
+    const html = file('privacy.html')
+    expect(html).toContain('<h2 id="cookies">')
+    expect(file('index.html')).toContain('href="/privacy#cookies"')
+    const page = text(html)
+    for (const e of STORAGE_DOCS) for (const name of e.name.split(', ')) expect(page).toContain(name)
+    expect(page).toContain('365 days')
   })
 })
