@@ -139,8 +139,9 @@ older Pixels from `pixel` to `pixel_5` and `pixel_c`, and the generic `medium_ph
   every iPhone from iOS 26.5; the top inset and status bar of every iPhone in landscape; the window
   size classes of every Android reading, which the claim states for Android 16; the size classes of
   every iPad reading, stated for full-screen iPads; and the fold of every foldable reading.
-- The repository has no `mcp-registry` environment and no `mcp-v*` tag, so the MCP Registry lists
-  no version of the server yet (spec 002 §4.4).
+- The MCP Registry lists `io.github.modaal-agent/screens-guide` 1.0.0 since 2026-11-23, published
+  by the tag `mcp-v1.0.0` (spec 002 §6.1). A round that changes a tool's output schema publishes
+  the next version (§3.1).
 
 ---
 
