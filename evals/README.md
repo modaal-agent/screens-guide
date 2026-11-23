@@ -42,6 +42,8 @@ Its frontmatter takes the keys the runner reads, among them `description`, `tags
 its file; its frontmatter carries `type`, one of `regex`, `llm`, `tool_used`, `tool_order`,
 `file_exists` and `baseline`, and that type's keys. The body is the pattern of a `regex` grader and
 the criteria of an `llm` grader. `tool_used` on `Skill` with `min: 1` and `arm: with-only` reports
-whether the skill fired; with `max: 0` it grades a prompt that must not fire it.
+whether the skill fired; with `min: 0` and `max: 0` it reports a prompt that must not fire it. Give
+`min: 0` there: `claude plugin eval` in Claude Code 2.1.322 reads a missing `min` as 1, so `max: 0`
+alone expects 1 to 0 calls and never passes.
 
 `scripts/check-skills.sh` S17 parses every case against those keys and types. It does not run them.
