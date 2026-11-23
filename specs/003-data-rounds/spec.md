@@ -4,7 +4,8 @@
 (spec 001 §10.5) and the answers to §8.1 to §8.4. Revised on 2026-11-19 with the repository and
 the site after specs 001 and 002 landed (§1.5), the recorded readings §1.1 left out, the device and
 runtime list of R2 to R4 (§2.1), the changes a round makes besides the export (§3.1), and §8.5
-and §8.6. Not implemented: no round has started. **Baseline:** `main` at `9a0db6b`.
+and §8.6. Revised on 2026-11-23 with the answers to §8.5 and §8.6 (D5, D6, §7). Not
+implemented: no round has started. **Baseline:** `main` at `9a0db6b`.
 **Obsoletes:** nothing.
 
 **Relates to:**
@@ -29,17 +30,18 @@ and §8.6. Not implemented: no round has started. **Baseline:** `main` at `9a0db
    measurements on each new OS release. R7 is withdrawn: the floor is iOS 18 (§2, D1, §8.2).
 4. **R2 to R4 add 25 iPhones, 25 iPads and 20 Android profiles**, each on the newest release
    runtime that runs it: iOS 27.2 for 41 of the 50 Apple devices, 26.5 for 5, 18.6 for 4, and
-   Android 16 for every profile (§2.1). 13 older Pixel profiles are in no round (§8.6).
+   Android 16 for every profile (§2.1). 13 older Pixel profiles are in no round (D6).
 5. **Each round lands in this repository as one commit in a pull request**: the export, a minor
    dataset version and its changelog entry (§3). The skill's tests check each device a round adds
    against the claims that hold over every device of a kind; a round that adds fields also changes
    two MCP tools' output schemas and publishes a new `server.json` version (§3.1).
 6. **The probes stay in the private measurement repository** (spec 001 §10.5). A round that
    extends a probe changes it there, and this repository receives only the export (§3).
-7. **§8.1 to §8.4 are answered.** R6 measures the default keyboard, the number pad and the iPad's
-   hardware-keyboard bar (D4). **Two questions are open:** whether R1's schema, selection rules,
-   page and tool are written into this spec and spec 002 before R1 is built (§8.5), and whether a
-   round measures what none plans now (§8.6).
+7. **All six questions are answered** (§8). R6 measures the default keyboard, the number pad and
+   the iPad's hardware-keyboard bar (D4). R1's schema, selection rules, page and tool are written
+   into this spec and spec 002, and reviewed, before R1 is built (D5). No round measures the 13
+   Pixel profiles older than `pixel_6` (D6), Display Zoom, or Android at a font scale other than 1
+   (§7).
 
 ---
 
@@ -156,8 +158,8 @@ older Pixels from `pixel` to `pixel_5` and `pixel_c`, and the generic `medium_ph
 | R8 | every device again on each new OS release: iOS 27.3 and later, the next Android API level | the same tools; spec 001 §2.2 picks the new `current` |
 
 Spec 002's tools return the devices of R2 to R4 and R8 with no change (§1.5). R5 and R6 add fields,
-which changes two tools' output schemas (§3.1). R1's components need a tool of their own, added to
-spec 002 when R1 lands (§8.5).
+which changes two tools' output schemas (§3.1). R1's components need a tool of their own, which spec 002
+specifies before R1 is built (D5).
 
 ### 2.1 The devices and runtimes of R2 to R4
 
@@ -194,7 +196,7 @@ installed: `pixel_6`, `pixel_6_pro`, `pixel_6a`, `pixel_7`, `pixel_7_pro`, `pixe
 `pixel_10_pro`, `pixel_10_pro_xl`, `pixel_10a`, `pixel_10_pro_fold` (with its folds and postures),
 `medium_phone`, `small_tablet` and `medium_tablet`. No round measures the other 13 profiles of
 §1.3: `pixel`, `pixel_xl`, `pixel_2`, `pixel_2_xl`, `pixel_3`, `pixel_3_xl`, `pixel_3a`,
-`pixel_3a_xl`, `pixel_4`, `pixel_4_xl`, `pixel_4a`, `pixel_5` and `pixel_c` (§8.6).
+`pixel_3a_xl`, `pixel_4`, `pixel_4_xl`, `pixel_4a`, `pixel_5` and `pixel_c` (D6).
 
 ---
 
@@ -256,7 +258,7 @@ installed: `pixel_6`, `pixel_6_pro`, `pixel_6a`, `pixel_7`, `pixel_7_pro`, `pixe
 | phase | what lands | why here |
 | --- | --- | --- |
 | 1 | `specs/003-data-rounds/spec.md` | the spec opens the series |
-| 2 | R1 | needs no simulator time; the site it adds a page and a data file to is live (§1.5); waits for §8.5's answer |
+| 2 | R1 | needs no simulator time; the site it adds a page and a data file to is live (§1.5); its schema, selection rules, page and tool are written into this spec and spec 002 and reviewed first (D5) |
 | 3 | R2 | the probe exists; the rounds run one at a time, in their numeric order (D1) |
 | 4 | R3 | after R2 (D1) |
 | 5 | R4 | after R3 (D1) |
@@ -308,6 +310,23 @@ predictive text off, and a layout that fits above the taller keyboard also fits 
 one. The cost: the dataset has no height for a user who turned predictive text off. Decided by the
 user on 2026-11-17, who took this recommendation (§8.4).
 
+**D5 — R1's design is written into the specs and reviewed before R1 is built.** This spec gains the
+fields that identify a component reading, the shape of `/data/v1/components.json`, the rule that
+selects each published value from the records of §1.1, and the `/components` page. Spec 002 gains
+the sixth MCP tool's name, arguments and output schema. `/data/v1/` is public and versioned, so a
+published shape changes only with a major version and `/data/v2/` (spec 001 §2.4). Building R1 and
+recording the choices in §5.1 afterwards was the alternative; it would publish a shape no one had
+reviewed. The cost: a review before R1's export. Decided by the user on 2026-11-23 (§8.5).
+
+**D6 — No round measures the 13 Pixel profiles older than `pixel_6`.** Google lists the phones of
+twelve of them, from the Pixel and Pixel XL to the Pixel 5, among the Pixel phones that no longer
+receive Android version updates (E2). The thirteenth, `pixel_c`, is a tablet whose last version is
+Android 8.1 (E3). The only system image installed is Android 16 (§1.3), which Google does not ship
+to any of them, so their readings would describe a device and version pair Google does not ship.
+Measuring each profile on its last Android version was the alternative; it needs an older system
+image per profile. The cost: no readings for these devices, which some people still use. Decided
+by the user on 2026-11-23 (§8.6).
+
 ---
 
 ## 7. Non-goals
@@ -316,6 +335,9 @@ user on 2026-11-17, who took this recommendation (§8.4).
 - Every device on every runtime (D2).
 - Runtimes below iOS 18, and the devices that need one (§8.2).
 - Android devices from other manufacturers (§8.3).
+- The 13 Pixel profiles older than `pixel_6` (D6).
+- Display Zoom on iOS, and Android at a font scale other than 1: non-goals as of 2026-11-23, by the
+  user's answer to §8.6. A later spec can add a round for them.
 
 ---
 
@@ -355,10 +377,16 @@ the build, because `/data/v1/` is a public, versioned path, and a published shap
 a major version and `/data/v2/` (`data/CHANGELOG.md`). The alternative is to build R1 and record
 the choices in §5.1. Asked on 2026-11-18; needs an answer before phase 2.
 
+*Answered 2026-11-23:* as proposed. The schema, the selection rules, the page and the tool are
+written into this spec and spec 002 for review before the build (D5).
+
 **8.6 — Measure what no round plans?** No round measures the 13 older Pixel profiles of §2.1,
 Display Zoom, or Android at a font scale other than 1 (§1.4). No decision records why R4 starts at
 `pixel_6`. Needs an answer before phase 5 (R4) for the Pixels, and before phase 7 (R6), the last
 round that extends a probe, for the other two. Raised 2026-11-19.
+
+*Answered 2026-11-23:* no round measures the 13 older Pixel profiles, for the reason D6 records.
+Display Zoom and Android font scales other than 1 are non-goals for now (§7).
 
 ---
 
@@ -367,3 +395,5 @@ round that extends a probe, for the other two. Raised 2026-11-19.
 | id | reference | public | URL and pin | cited in |
 | --- | --- | --- | --- | --- |
 | E1 | *Redacted:* Modaal's device measurement runs and their run notes, inventoried 2026-11-17 (the same source as spec 001's E13) | no | — | §1.1, §3 |
+| E2 | Google Pixel Phone Help, "Learn when you'll get software updates on Google Pixel phones" | yes | https://support.google.com/pixelphone/answer/4457705; unversioned, read 2026-11-23 | D6 |
+| E3 | Wikipedia, "Pixel C" | yes | https://en.wikipedia.org/wiki/Pixel_C; unversioned, read 2026-11-23 | D6 |
