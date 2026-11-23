@@ -26,6 +26,9 @@
   // /mcp's day window: one DailyCount object per client address, SQLite-backed.
   "durable_objects": { "bindings": [{ "name": "DAILY_COUNT", "class_name": "DailyCount" }] },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["DailyCount"] }],
+  // Workers Logs: one invocation log, with the request's method and URL, for each request the
+  // script runs for, kept at most 7 days. /privacy says so (spec 002 §6.1).
+  "observability": { "enabled": true },
   // No usage data from wrangler to Cloudflare.
   "send_metrics": false
 }

@@ -247,7 +247,7 @@ export function privacyDoc(): Doc {
       { type: 'h2', text: 'Hosting' },
       {
         type: 'p',
-        text: "Cloudflare serves the site and keeps its own logs of the requests it serves, under [Cloudflare's privacy policy](https://www.cloudflare.com/privacypolicy/).",
+        text: "Cloudflare serves the site and keeps its own logs of the requests it serves, under [Cloudflare's privacy policy](https://www.cloudflare.com/privacypolicy/). For each request to `/mcp`, a page, a data file, `llms.txt`, a Markdown copy or the skill's files, the site's Cloudflare account also keeps a log entry for at most 7 days, in [Workers Logs](https://developers.cloudflare.com/workers/observability/logs/workers-logs/). It holds the request's method and URL, and the details of the request and response Cloudflare adds to such logs.",
       },
     ],
   }

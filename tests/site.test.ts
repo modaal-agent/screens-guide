@@ -231,6 +231,8 @@ describe('the MCP server on the pages', () => {
     for (const event of ['mcp_request', 'page_served', 'file_served']) expect(page).toContain(event)
     expect(page).toContain('SHA-256 hash of your IP address')
     expect(page).toContain('worker/ratelimit.ts')
+    expect(page).toContain('Workers Logs')
+    expect(page).toContain('at most 7 days')
   })
 })
 
