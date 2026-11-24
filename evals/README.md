@@ -15,6 +15,10 @@ text: edit the skill and run that case again.
 | `data-iphone-17-corner-radius` | data | the iPhone 17's corner radius, and a card's for a 16 pt margin | 62 pt and 46 pt |
 | `review-iphone-17-card` | review | three frames on the iPhone 17 in portrait | the card's square corners cut off by 3.05 pt, and 18 pt into the 34 pt bottom inset |
 | `review-pixel-fold-half-open` | review | three frames on the Pixel Fold, half open in landscape | the list and the button cross the fold at x 420.57 dp |
+| `data-iphone-duo-half-open-hinge` | data, `web` | the iPhone Duo's hinge band, its margins and the camera region, half open | the band at y 455.5 to 495.5 pt with 20 pt either side; the camera region 134 × 82 pt at x 535 |
+| `data-iphone-16-tab-bar-by-ios-version` | data, `web` | the iPhone 16's tab bar frame on iOS 18.6 and on iOS 27.2 | 393 × 83 pt at y 769 on 18.6; a 274 × 62 pt capsule at x 59.67, y 769 on 27.2 |
+| `data-pixel-8-insets-by-rotation` | data, `web` | the Pixel 8's cutout and system-bar insets at each rotation | the 50.29 dp cutout on the top, left, bottom and right edges; 28.19 dp at the top when turned |
+| `review-iphone-17-landscape-tab-bar` | review, `web` | three frames on the iPhone 17 in landscape, under the tab bar | the bar and the list under the 259.33 × 44 pt capsule at x 307.33; the detail 62 pt into the right inset |
 
 ## Running them
 
@@ -32,7 +36,28 @@ each run costs model calls; quote a round's scores and cost in the commit messag
 measured.
 
 The runner starts no plugin MCP server that has no mock under `evals/mocks/` (`--mocks record`, the
-default), so these cases measure the skill with its own `references/devices.md`, without the tools.
+default), so a round without the flags below measures the skill with its own
+`references/devices.md`, without the tools.
+
+### The cases tagged `web`
+
+The four cases tagged `web` ask for measured values that public pages give in part or not at all: a
+device in beta, an older iOS version, each rotation, and the exact frame of a bar. Their `allowed_tools` give
+both runs `WebSearch` and `WebFetch`, so the run without the plugin can search the web. The run with
+the plugin also gets the MCP server at https://screens.guide/mcp: `references/devices.md` holds the
+current build only, and `data-iphone-16-tab-bar-by-ios-version` needs iOS 18.6. Run them with:
+
+```bash
+P=mcp__plugin_screens-guide_screens-guide__
+claude plugin eval "$run" --tag web --ablation with-without --runs 1 --no-publish --trust-plugin \
+  --allow-real-servers --allow-tools WebSearch WebFetch ${P}list_devices ${P}get_device \
+  ${P}compare_devices ${P}check_layout ${P}convert_units \
+  --output-dir "evals/results/$(date +%Y-%m-%dT%H-%M-%S)"
+```
+
+`--allow-real-servers` starts the live server's client as you, outside the runner's sandbox. Each
+tool call counts against the server's per-address limits and sends an `mcp_request` event
+(`/privacy` lists both).
 
 ## Writing a case
 
