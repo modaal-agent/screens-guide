@@ -139,4 +139,5 @@ The display's rounded corners clip whatever is drawn under them.
 4. Without it, check the same against [references/devices.md](references/devices.md) with the
    corner arithmetic above.
 5. Repeat in landscape, and on Android at each rotation the app allows: the insets and bars change.
-6. Report each finding with its number, the device and the runtime, and the change that fixes it.
+6. Report each finding with its number, the device and the runtime, and the change that fixes it
+   with the value to use: the corner radius, the edge to move it to, or where to split the panes.
