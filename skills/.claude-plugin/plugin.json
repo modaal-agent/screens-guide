@@ -1,6 +1,6 @@
 {
   "name": "screens-guide",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Lay out and review mobile screens against measured screen sizes, safe-area insets, corner radii, system bars, size classes and folds of iPhones, iPads and Android devices. Carries the screens-guide skill and connects the screens.guide MCP server.",
   "author": {
     "name": "Modaal.dev",

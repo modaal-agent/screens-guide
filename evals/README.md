@@ -27,6 +27,7 @@ round copies the plugin and `evals/` into one scratch directory. From the reposi
 
 ```bash
 run=$(mktemp -d) && cp -R skills/. "$run" && cp -R evals "$run/evals"
+grep -l '^tags:.*web' "$run"/evals/*/prompt.md | xargs -n 1 dirname | xargs rm -rf
 claude plugin eval "$run" --ablation with-without --runs 1 --no-publish --trust-plugin \
   --output-dir "evals/results/$(date +%Y-%m-%dT%H-%M-%S)"
 ```
@@ -35,19 +36,21 @@ claude plugin eval "$run" --ablation with-without --runs 1 --no-publish --trust-
 each run costs model calls; quote a round's scores and cost in the commit message of the change it
 measured.
 
+The `grep` line drops the four cases tagged `web` from the copy, because they need the live server.
 The runner starts no plugin MCP server that has no mock under `evals/mocks/` (`--mocks record`, the
-default), so a round without the flags below measures the skill with its own
-`references/devices.md`, without the tools.
+default), so this round measures the skill with its own `references/devices.md`, without the tools.
 
 ### The cases tagged `web`
 
 The four cases tagged `web` ask for measured values that public pages give in part or not at all: a
-device in beta, an older iOS version, each rotation, and the exact frame of a bar. Their `allowed_tools` give
-both runs `WebSearch` and `WebFetch`, so the run without the plugin can search the web. The run with
-the plugin also gets the MCP server at https://screens.guide/mcp: `references/devices.md` holds the
-current build only, and `data-iphone-16-tab-bar-by-ios-version` needs iOS 18.6. Run them with:
+device in beta, an older iOS version, each rotation, and the exact frame of a bar. Their
+`allowed_tools` give both runs `WebSearch` and `WebFetch`, so the run without the plugin can search
+the web. The run with the plugin also gets the MCP server at https://screens.guide/mcp:
+`references/devices.md` holds the current build only, and `data-iphone-16-tab-bar-by-ios-version`
+needs iOS 18.6. Run them from a fresh copy:
 
 ```bash
+run=$(mktemp -d) && cp -R skills/. "$run" && cp -R evals "$run/evals"
 P=mcp__plugin_screens-guide_screens-guide__
 claude plugin eval "$run" --tag web --ablation with-without --runs 1 --no-publish --trust-plugin \
   --allow-real-servers --allow-tools WebSearch WebFetch ${P}list_devices ${P}get_device \
